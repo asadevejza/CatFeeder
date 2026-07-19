@@ -1,0 +1,13 @@
+@CatFeeder.Api_HostAddress = http://localhost:5103
+
+GET {{CatFeeder.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+POST https://localhost:7117/api/cats
+Content-Type: application/json
+
+{
+  "name": "Bella",
+  "rfidTag": "A1"
+}

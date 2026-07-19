@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="CatFeeder.Api/CatFeeder.Api.csproj" />
+  <Project Path="CatFeeder.Data/CatFeeder.Data.csproj" />
+  <Project Path="CatFeeder.Servis/CatFeeder.Servis.csproj" />
+</Solution>

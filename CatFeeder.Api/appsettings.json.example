@@ -1,0 +1,12 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost,14330;Database=CatFeederDb;User Id=sa;Password=PostaviJakuLozinkuOvdje123!;TrustServerCertificate=True"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*"
+}
