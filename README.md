@@ -172,4 +172,4 @@ MIT License
 
 ## 👤 Autor
 
-asadevejza
+Asad Vejzović
