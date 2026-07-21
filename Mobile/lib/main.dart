@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:timezone/data/latest_all.dart' as tzdata;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -20,8 +27,10 @@ class MyHttpOverrides extends HttpOverrides {
   }
 }
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   HttpOverrides.global = MyHttpOverrides();
+  await NotificationService.init();
   runApp(const CatFeederApp());
 }
 
@@ -37,6 +46,180 @@ class SettingsService {
   static Future<void> saveBaseUrl(String url) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_baseUrlKey, url);
+  }
+}
+
+// Upravlja lokalnim notifikacijama — podsjetnici za zakazano hranjenje i
+// upozorenja kad ponestane hrane/vode. Sve radi lokalno na telefonu, ne
+// treba mu internet ni push server.
+class NotificationService {
+  static final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  static bool _initialized = false;
+
+  static const AndroidNotificationDetails _scheduleAndroidDetails = AndroidNotificationDetails(
+    'feeding_schedule_channel',
+    'Podsjetnici za hranjenje',
+    channelDescription: 'Podsjeća te kad je vrijeme za zakazano hranjenje',
+    importance: Importance.high,
+    priority: Priority.high,
+  );
+
+  static const AndroidNotificationDetails _alertAndroidDetails = AndroidNotificationDetails(
+    'low_level_channel',
+    'Upozorenja o nivou',
+    channelDescription: 'Upozorava kad ponestane hrane ili vode',
+    importance: Importance.high,
+    priority: Priority.high,
+  );
+
+  static Future<void> init() async {
+    if (_initialized) return;
+
+    tzdata.initializeTimeZones();
+    try {
+      final locationName = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(locationName));
+    } catch (_) {
+      // Ako ne uspije pročitati pravu vremensku zonu uređaja, podsjetnici
+      // ostaju na default zoni — rijedak slučaj, ali ne blokira app.
+    }
+
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosInit = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+    const initSettings = InitializationSettings(android: androidInit, iOS: iosInit);
+
+    await _plugin.initialize(settings: initSettings);
+    _initialized = true;
+  }
+
+  static Future<void> requestPermissions() async {
+    await _plugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
+    await _plugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestExactAlarmsPermission();
+    await _plugin
+        .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
+  }
+
+  static const Map<String, int> _dayToWeekday = {
+    'Monday': DateTime.monday,
+    'Tuesday': DateTime.tuesday,
+    'Wednesday': DateTime.wednesday,
+    'Thursday': DateTime.thursday,
+    'Friday': DateTime.friday,
+    'Saturday': DateTime.saturday,
+    'Sunday': DateTime.sunday,
+  };
+
+  // Jedan raspored može imati notifikaciju za više dana — kodiramo scheduleId
+  // i dan u sedmici zajedno u jedinstven ID notifikacije.
+  static int _idForScheduleDay(int scheduleId, int weekday) => scheduleId * 10 + weekday;
+
+  static Future<void> cancelForSchedule(int scheduleId) async {
+    for (int weekday = 1; weekday <= 7; weekday++) {
+      await _plugin.cancel(id: _idForScheduleDay(scheduleId, weekday));
+    }
+  }
+
+  // timeString dolazi u formatu "07:30:00" (isto kako ga backend šalje),
+  // daysOfWeekCsv je npr. "Monday,Wednesday,Friday".
+  static Future<void> scheduleForFeedingSchedule({
+    required int scheduleId,
+    required String catName,
+    required String timeString,
+    required int portionGrams,
+    required String daysOfWeekCsv,
+  }) async {
+    await cancelForSchedule(scheduleId); // prvo ukloni stare termine, pa zakaži nove
+
+    final parts = timeString.split(':');
+    final hour = int.tryParse(parts[0]) ?? 8;
+    final minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+
+    final days = daysOfWeekCsv.split(',').map((d) => d.trim()).where((d) => d.isNotEmpty);
+
+    for (final day in days) {
+      final weekday = _dayToWeekday[day];
+      if (weekday == null) continue;
+
+      final scheduledDate = _nextInstanceOfWeekdayTime(weekday, hour, minute);
+
+await _plugin.zonedSchedule(
+  id: _idForScheduleDay(scheduleId, weekday),
+  notificationDetails: const NotificationDetails(android: _scheduleAndroidDetails),
+  title: 'Vrijeme za hranjenje 🐾',
+  body: '$catName treba $portionGrams g hrane',
+  scheduledDate: scheduledDate,
+  androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+  matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+);
+    }
+  }
+
+  static tz.TZDateTime _nextInstanceOfWeekdayTime(int weekday, int hour, int minute) {
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    while (scheduled.weekday != weekday || scheduled.isBefore(now)) {
+      scheduled = scheduled.add(const Duration(days: 1));
+    }
+    return scheduled;
+  }
+
+  // Fiksni ID po tipu (hrana/voda) — nova poruka zamijeni prethodnu umjesto gomilanja.
+  static Future<void> showLowLevelAlert({required bool isFood, required double level}) async {
+    final id = isFood ? 900001 : 900002;
+    final title = isFood ? 'Ponestaje hrane! 🍽️' : 'Ponestaje vode! 💧';
+    final body =
+        '${isFood ? "Nivo hrane" : "Nivo vode"} je pao na ${level.toStringAsFixed(0)}%. Vrijeme je da dosuješ.';
+
+ await _plugin.show(
+  id: id,
+  notificationDetails: const NotificationDetails(android: _alertAndroidDetails),
+  title: title,
+  body: body,
+);
+  }
+}
+
+// Čuva sliku svake mačke lokalno na telefonu (Documents folder), van cache-a
+// koji sistem može da obriše. Slika se ne šalje na backend — ostaje samo na
+// ovom uređaju, isto kao adresa servera u Podešavanjima.
+class CatAvatarService {
+  static Future<Directory> _avatarDir() async {
+    final docsDir = await getApplicationDocumentsDirectory();
+    final dir = Directory('${docsDir.path}/cat_avatars');
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    return dir;
+  }
+
+  static Future<String?> getAvatarPath(int catId) async {
+    final dir = await _avatarDir();
+    final file = File('${dir.path}/cat_$catId.jpg');
+    if (await file.exists()) return file.path;
+    return null;
+  }
+
+  static Future<String> setAvatar(int catId, XFile picked) async {
+    final dir = await _avatarDir();
+    final destPath = '${dir.path}/cat_$catId.jpg';
+    final bytes = await picked.readAsBytes();
+    await File(destPath).writeAsBytes(bytes, flush: true);
+    return destPath;
+  }
+
+  static Future<void> removeAvatar(int catId) async {
+    final dir = await _avatarDir();
+    final file = File('${dir.path}/cat_$catId.jpg');
+    if (await file.exists()) await file.delete();
   }
 }
 
@@ -134,10 +317,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   // kao okidač da odigra animaciju, čak i ako je "raspoloženje" isto kao prije.
   int feedTrigger = 0;
 
+  // Prati da li je upozorenje o niskom nivou već prikazano, da se ne ponavlja
+  // na svaki fetch dok je nivo i dalje nizak — resetuje se kad nivo ponovo poraste.
+  bool _foodAlertActive = false;
+  bool _waterAlertActive = false;
+
   @override
   void initState() {
     super.initState();
     baseUrl = widget.initialBaseUrl;
+    NotificationService.requestPermissions();
     fetchSensorData();
     fetchCats();
   }
@@ -157,6 +346,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             humidity = (lastReading['humidity'] as num?)?.toDouble() ?? 0.0;
             isLoadingDashboard = false;
           });
+          _checkLowLevelAlerts();
         } else {
           setState(() => isLoadingDashboard = false);
         }
@@ -164,6 +354,27 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => isLoadingDashboard = false);
+    }
+  }
+
+  // Prikazuje notifikaciju kad nivo padne ispod 20%, ali samo jednom dok god
+  // ostane nizak — čim se popuni iznad 25%, "otključava" se za sljedeći put.
+  void _checkLowLevelAlerts() {
+    if (foodLevel < 20 && !_foodAlertActive) {
+      _foodAlertActive = true;
+      NotificationService.showLowLevelAlert(isFood: true, level: foodLevel);
+    } else if (foodLevel >= 25) {
+      _foodAlertActive = false;
+    }
+
+    final water = waterLevel;
+    if (water != null) {
+      if (water < 20 && !_waterAlertActive) {
+        _waterAlertActive = true;
+        NotificationService.showLowLevelAlert(isFood: false, level: water);
+      } else if (water >= 25) {
+        _waterAlertActive = false;
+      }
     }
   }
 
@@ -361,14 +572,14 @@ class DashboardScreen extends StatelessWidget {
                     title: 'Nivo hrane u spremniku',
                     level: foodLevel,
                     color: Colors.deepOrange,
-                    lowWarningText: 'Vrijeme je da dosuješ hranu u spremnik',
+                    lowWarningText: 'Vrijeme je da uspeš hranu u spremnik',
                   ),
                   const SizedBox(height: 16),
                   _LevelCard(
                     title: 'Nivo vode u posudi',
                     level: waterLevel,
                     color: Colors.blue,
-                    lowWarningText: 'Vrijeme je da dosuješ vodu',
+                    lowWarningText: 'Vrijeme je da uspeš vodu',
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -552,6 +763,48 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
   int selectedPortion = 50;
   bool isFeeding = false;
 
+  // catId -> lokalna putanja do slike na telefonu (samo za mačke koje je imaju)
+  Map<int, String> avatarPaths = {};
+
+  @override
+  void initState() {
+    super.initState();
+    loadAvatars();
+  }
+
+  @override
+  void didUpdateWidget(covariant ManualFeedingScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.cats.length != widget.cats.length) {
+      loadAvatars();
+    }
+  }
+
+  Future<void> loadAvatars() async {
+    final Map<int, String> loaded = {};
+    for (final cat in widget.cats) {
+      final path = await CatAvatarService.getAvatarPath(cat.id);
+      if (path != null) loaded[cat.id] = path;
+    }
+    if (!mounted) return;
+    setState(() => avatarPaths = loaded);
+  }
+
+  Future<void> pickAndSetAvatar(Cat cat, ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: source, maxWidth: 800, maxHeight: 800, imageQuality: 85);
+      if (picked == null) return;
+
+      final path = await CatAvatarService.setAvatar(cat.id, picked);
+      if (!mounted) return;
+      setState(() => avatarPaths[cat.id] = path);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Greška pri biranju slike: $e')));
+    }
+  }
+
   Future<void> feedCat() async {
     if (widget.selectedCatId == null) return;
     setState(() => isFeeding = true);
@@ -630,6 +883,16 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
               child: Text(cat.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             ),
             ListTile(
+              leading: const Icon(Icons.camera_alt_outlined, color: Colors.deepOrange),
+              title: const Text('Slikaj'),
+              onTap: () => Navigator.pop(context, 'camera'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined, color: Colors.deepOrange),
+              title: const Text('Izaberi iz galerije'),
+              onTap: () => Navigator.pop(context, 'gallery'),
+            ),
+            ListTile(
               leading: const Icon(Icons.edit_outlined, color: Colors.deepOrange),
               title: const Text('Preimenuj'),
               onTap: () => Navigator.pop(context, 'edit'),
@@ -644,6 +907,15 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
         ),
       ),
     );
+
+    if (action == 'camera') {
+      await pickAndSetAvatar(cat, ImageSource.camera);
+      return;
+    }
+    if (action == 'gallery') {
+      await pickAndSetAvatar(cat, ImageSource.gallery);
+      return;
+    }
 
     if (!mounted || action == null) return;
 
@@ -688,6 +960,7 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
         ),
       );
       if (confirm == true && mounted) {
+        await CatAvatarService.removeAvatar(cat.id);
         final success = await widget.onDeleteCat(cat.id);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -746,6 +1019,7 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
                     itemBuilder: (context, index) {
                       final cat = widget.cats[index];
                       final selected = cat.id == widget.selectedCatId;
+                      final avatarPath = avatarPaths[cat.id];
                       return GestureDetector(
                         onTap: () => widget.onSelectCat(cat.id),
                         onLongPress: () => showManageCatDialog(cat),
@@ -763,7 +1037,13 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Text('🐈', style: TextStyle(fontSize: 26)),
+                              avatarPath != null
+                                  ? CircleAvatar(
+                                      radius: 16,
+                                      backgroundColor: selected ? Colors.white : Colors.orange.shade50,
+                                      backgroundImage: FileImage(File(avatarPath)),
+                                    )
+                                  : const Text('🐈', style: TextStyle(fontSize: 26)),
                               const SizedBox(height: 4),
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -986,6 +1266,34 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
     return match.isNotEmpty ? match.first.name : 'Nepoznata mačka';
   }
 
+  // Zbraja ukupne grame hrane po danu, za posljednjih 7 dana (uključujući danas).
+  // Vraća mapu gdje je ključ ponoć tog dana, poredanu od najstarijeg ka najnovijem.
+  Map<DateTime, double> last7DaysTotals() {
+    final today = DateTime.now();
+    final days = List.generate(
+      7,
+      (i) => DateTime(today.year, today.month, today.day).subtract(Duration(days: 6 - i)),
+    );
+    final totals = {for (final d in days) d: 0.0};
+
+    for (final log in logs) {
+      final rawTimestamp = log['timestamp'];
+      if (rawTimestamp == null) continue;
+      DateTime parsed;
+      try {
+        parsed = DateTime.parse(rawTimestamp.toString());
+      } catch (_) {
+        continue;
+      }
+      final dayKey = DateTime(parsed.year, parsed.month, parsed.day);
+      if (totals.containsKey(dayKey)) {
+        final grams = (log['portionGrams'] as num?)?.toDouble() ?? 0.0;
+        totals[dayKey] = totals[dayKey]! + grams;
+      }
+    }
+    return totals;
+  }
+
   static const Map<String, String> _daysBosanski = {
     'monday': 'Ponedjeljak',
     'mon': 'Pon',
@@ -1029,12 +1337,30 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
           schedules = json.decode(schedulesResponse.body);
           isLoading = false;
         });
+        _syncScheduleNotifications();
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Greška pri čitanju istorije: $e')),
+      );
+    }
+  }
+
+  // Ponovo zakazuje notifikacije za sve trenutne rasporede — poziva se nakon
+  // svakog učitavanja da podsjetnici uvijek odgovaraju stanju u bazi (npr. i
+  // nakon reinstalacije app-a, kad bi lokalno zakazani alarmi bili izgubljeni).
+  Future<void> _syncScheduleNotifications() async {
+    for (final schedule in schedules) {
+      final id = schedule['id'] as int?;
+      if (id == null) continue;
+      await NotificationService.scheduleForFeedingSchedule(
+        scheduleId: id,
+        catName: catName(schedule['catId']),
+        timeString: (schedule['time'] as String?) ?? '08:00:00',
+        portionGrams: (schedule['portionGrams'] as num?)?.toInt() ?? 0,
+        daysOfWeekCsv: (schedule['daysOfWeek'] as String?) ?? '',
       );
     }
   }
@@ -1069,6 +1395,7 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
       final response = await http.delete(Uri.parse('${widget.baseUrl}/feedingschedules/$id'));
       if (!mounted) return;
       if (response.statusCode == 200 || response.statusCode == 204) {
+        await NotificationService.cancelForSchedule(id);
         loadData();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Brisanje nije uspjelo.')));
@@ -1124,33 +1451,38 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
                 children: [
                   RefreshIndicator(
                     onRefresh: loadData,
-                    child: logs.isEmpty
-                        ? ListView(children: const [
-                            Padding(padding: EdgeInsets.all(40), child: Center(child: Text('Nema zabilježenih hranjenja.')))
-                          ])
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(12),
-                            itemCount: logs.length,
-                            itemBuilder: (context, index) {
-                              final log = logs[index];
-                              return Card(
-                                margin: const EdgeInsets.symmetric(vertical: 6),
-                                child: ListTile(
-                                  leading: const CircleAvatar(
-                                    backgroundColor: Color(0xFFE8F5E9),
-                                    child: Icon(Icons.check_circle, color: Colors.green),
-                                  ),
-                                  title: Text('${catName(log['catId'])} • ${log['portionGrams']}g',
-                                      style: const TextStyle(fontWeight: FontWeight.w600)),
-                                  subtitle: Text('Pokretač: ${log['triggeredBy']}'),
-                                  trailing: Text(
-                                    log['timestamp'] != null ? log['timestamp'].toString().substring(11, 16) : '',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              );
-                            },
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: logs.isEmpty ? 2 : logs.length + 1,
+                      itemBuilder: (context, index) {
+                        if (index == 0) {
+                          return _WeeklyFeedingChart(dailyTotals: last7DaysTotals());
+                        }
+                        if (logs.isEmpty) {
+                          return const Padding(
+                            padding: EdgeInsets.all(40),
+                            child: Center(child: Text('Nema zabilježenih hranjenja.')),
+                          );
+                        }
+                        final log = logs[index - 1];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          child: ListTile(
+                            leading: const CircleAvatar(
+                              backgroundColor: Color(0xFFE8F5E9),
+                              child: Icon(Icons.check_circle, color: Colors.green),
+                            ),
+                            title: Text('${catName(log['catId'])} • ${log['portionGrams']}g',
+                                style: const TextStyle(fontWeight: FontWeight.w600)),
+                            subtitle: Text('Pokretač: ${log['triggeredBy']}'),
+                            trailing: Text(
+                              log['timestamp'] != null ? log['timestamp'].toString().substring(11, 16) : '',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
                           ),
+                        );
+                      },
+                    ),
                   ),
                   RefreshIndicator(
                     onRefresh: loadData,
@@ -1649,6 +1981,91 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ================= GRAFIKON — HRANA POJEDENA PO DANU (7 DANA) =================
+class _WeeklyFeedingChart extends StatelessWidget {
+  final Map<DateTime, double> dailyTotals;
+  const _WeeklyFeedingChart({required this.dailyTotals});
+
+  static const List<String> _dayLabels = ['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned'];
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = dailyTotals.entries.toList();
+    final maxValue = entries.map((e) => e.value).fold<double>(0, (a, b) => a > b ? a : b);
+    final chartMaxY = maxValue <= 0 ? 100.0 : maxValue * 1.35;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 20, 20, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(left: 10, bottom: 18),
+              child: Text('Poslednjih 7 dana', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
+            SizedBox(
+              height: 170,
+              child: BarChart(
+                BarChartData(
+                  maxY: chartMaxY,
+                  minY: 0,
+                  gridData: const FlGridData(show: false),
+                  borderData: FlBorderData(show: false),
+                  barTouchData: BarTouchData(
+                    touchTooltipData: BarTouchTooltipData(
+                      getTooltipColor: (_) => Colors.deepOrange,
+                      getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
+                        '${rod.toY.toStringAsFixed(0)}g',
+                        const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 26,
+                        getTitlesWidget: (value, meta) {
+                          final index = value.toInt();
+                          if (index < 0 || index >= entries.length) return const SizedBox.shrink();
+                          final weekday = entries[index].key.weekday; // 1 = ponedjeljak ... 7 = nedjelja
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(_dayLabels[weekday - 1], style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  barGroups: [
+                    for (int i = 0; i < entries.length; i++)
+                      BarChartGroupData(
+                        x: i,
+                        barRods: [
+                          BarChartRodData(
+                            toY: entries[i].value,
+                            color: entries[i].value > 0 ? Colors.deepOrange : Colors.orange.shade100,
+                            width: 20,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
