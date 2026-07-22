@@ -2,6 +2,7 @@
   "ConnectionStrings": {
     "DefaultConnection": "Server=localhost,14330;Database=CatFeederDb;User Id=sa;Password=PostaviJakuLozinkuOvdje123!;TrustServerCertificate=True"
   },
+  "ApiKey": "generisi-svoj-tajni-kljuc-ovdje",
   "Logging": {
     "LogLevel": {
       "Default": "Information",

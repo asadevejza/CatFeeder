@@ -19,6 +19,16 @@ const int totalCapacityGrams = 2000;
 // 10.0.2.2 je specijalna adresa koju Android Emulator koristi za "localhost" računara.
 const String defaultBaseUrl = 'http://10.0.2.2:5103/api';
 
+// Mora biti IDENTIČAN "ApiKey" vrijednosti u CatFeeder.Api/appsettings.json na backendu.
+// Ako ih promijeniš, promijeni na oba mjesta.
+const String apiKey = '82fUSgPL8mUSKGoLvUYK1U9Bl7NraNrkbxhLqvgfTvU';
+
+// Headeri koje SVAKI poziv ka backendu mora nositi (X-Api-Key) + Content-Type za pozive sa tijelom.
+Map<String, String> apiHeaders({bool withJsonBody = false}) => {
+      'X-Api-Key': apiKey,
+      if (withJsonBody) 'Content-Type': 'application/json',
+    };
+
 class MyHttpOverrides extends HttpOverrides {
   @override
   HttpClient createHttpClient(SecurityContext? context) {
@@ -151,15 +161,15 @@ class NotificationService {
 
       final scheduledDate = _nextInstanceOfWeekdayTime(weekday, hour, minute);
 
-await _plugin.zonedSchedule(
-  id: _idForScheduleDay(scheduleId, weekday),
-  notificationDetails: const NotificationDetails(android: _scheduleAndroidDetails),
-  title: 'Vrijeme za hranjenje 🐾',
-  body: '$catName treba $portionGrams g hrane',
-  scheduledDate: scheduledDate,
-  androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-  matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-);
+      await _plugin.zonedSchedule(
+        id: _idForScheduleDay(scheduleId, weekday),
+        title: 'Vrijeme za hranjenje 🐾',
+        body: '$catName treba $portionGrams g hrane',
+        scheduledDate: scheduledDate,
+        notificationDetails: const NotificationDetails(android: _scheduleAndroidDetails),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      );
     }
   }
 
@@ -179,12 +189,12 @@ await _plugin.zonedSchedule(
     final body =
         '${isFood ? "Nivo hrane" : "Nivo vode"} je pao na ${level.toStringAsFixed(0)}%. Vrijeme je da dosuješ.';
 
- await _plugin.show(
-  id: id,
-  notificationDetails: const NotificationDetails(android: _alertAndroidDetails),
-  title: title,
-  body: body,
-);
+    await _plugin.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(android: _alertAndroidDetails),
+    );
   }
 }
 
@@ -245,30 +255,36 @@ class CatFeederApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepOrange,
+          seedColor: Colors.lightBlue,
           brightness: Brightness.light,
         ),
-        scaffoldBackgroundColor: const Color(0xFFFFF8F2),
+        scaffoldBackgroundColor: const Color(0xFFF7FAFC),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.deepOrange,
-          foregroundColor: Colors.white,
+          backgroundColor: Colors.white,
+          foregroundColor: Color(0xFF1A2B3C),
           elevation: 0,
           centerTitle: true,
-          titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
+          titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF1A2B3C)),
+          iconTheme: IconThemeData(color: Colors.lightBlue),
         ),
         cardTheme: CardThemeData(
-          elevation: 3,
-          shadowColor: Colors.deepOrange.withOpacity(0.15),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          elevation: 0,
+          color: Colors.white,
+          shadowColor: Colors.black.withOpacity(0.06),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(color: Colors.grey.shade100, width: 1),
+          ),
           margin: EdgeInsets.zero,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.deepOrange,
+            backgroundColor: Colors.lightBlue,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
             textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            elevation: 0,
           ),
         ),
       ),
@@ -277,8 +293,8 @@ class CatFeederApp extends StatelessWidget {
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Scaffold(
-              backgroundColor: Color(0xFFFFF8F2),
-              body: Center(child: CircularProgressIndicator(color: Colors.deepOrange)),
+              backgroundColor: Color(0xFFF7FAFC),
+              body: Center(child: CircularProgressIndicator(color: Colors.lightBlue)),
             );
           }
           return MainNavigationScreen(initialBaseUrl: snapshot.data!);
@@ -333,7 +349,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   Future<void> fetchSensorData() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/sensorreadings'));
+      final response = await http.get(Uri.parse('$baseUrl/sensorreadings'), headers: apiHeaders());
       if (!mounted) return;
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -380,7 +396,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   Future<void> fetchCats() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/cats'));
+      final response = await http.get(Uri.parse('$baseUrl/cats'), headers: apiHeaders());
       if (!mounted) return;
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -405,7 +421,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/cats'),
-        headers: {'Content-Type': 'application/json'},
+        headers: apiHeaders(withJsonBody: true),
         body: json.encode({'name': name}),
       );
       if (!mounted) return false;
@@ -423,7 +439,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     try {
       final response = await http.put(
         Uri.parse('$baseUrl/cats/$id'),
-        headers: {'Content-Type': 'application/json'},
+        headers: apiHeaders(withJsonBody: true),
         body: json.encode({'id': id, 'name': newName}),
       );
       if (!mounted) return false;
@@ -439,7 +455,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   Future<bool> deleteCat(int id) async {
     try {
-      final response = await http.delete(Uri.parse('$baseUrl/cats/$id'));
+      final response = await http.delete(Uri.parse('$baseUrl/cats/$id'), headers: apiHeaders());
       if (!mounted) return false;
       if (response.statusCode == 200 || response.statusCode == 204) {
         setState(() {
@@ -521,7 +537,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           child: BottomNavigationBar(
             currentIndex: _selectedIndex,
             onTap: (index) => setState(() => _selectedIndex = index),
-            selectedItemColor: Colors.deepOrange,
+            selectedItemColor: Colors.lightBlue,
             unselectedItemColor: Colors.grey,
             backgroundColor: Colors.white,
             type: BottomNavigationBarType.fixed,
@@ -571,15 +587,15 @@ class DashboardScreen extends StatelessWidget {
                   _LevelCard(
                     title: 'Nivo hrane u spremniku',
                     level: foodLevel,
-                    color: Colors.deepOrange,
-                    lowWarningText: 'Vrijeme je da uspeš hranu u spremnik',
+                    color: Colors.amber.shade700,
+                    lowWarningText: 'Vrijeme je da dosuješ hranu u spremnik',
                   ),
                   const SizedBox(height: 16),
                   _LevelCard(
                     title: 'Nivo vode u posudi',
                     level: waterLevel,
-                    color: Colors.blue,
-                    lowWarningText: 'Vrijeme je da uspeš vodu',
+                    color: Colors.lightBlue,
+                    lowWarningText: 'Vrijeme je da dosuješ vodu',
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -811,7 +827,7 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
     try {
       final response = await http.post(
         Uri.parse('${widget.baseUrl}/feedinglogs'),
-        headers: {'Content-Type': 'application/json'},
+        headers: apiHeaders(withJsonBody: true),
         body: json.encode({
           'catId': widget.selectedCatId,
           'portionGrams': selectedPortion,
@@ -883,17 +899,17 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
               child: Text(cat.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt_outlined, color: Colors.deepOrange),
+              leading: const Icon(Icons.camera_alt_outlined, color: Colors.lightBlue),
               title: const Text('Slikaj'),
               onTap: () => Navigator.pop(context, 'camera'),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined, color: Colors.deepOrange),
+              leading: const Icon(Icons.photo_library_outlined, color: Colors.lightBlue),
               title: const Text('Izaberi iz galerije'),
               onTap: () => Navigator.pop(context, 'gallery'),
             ),
             ListTile(
-              leading: const Icon(Icons.edit_outlined, color: Colors.deepOrange),
+              leading: const Icon(Icons.edit_outlined, color: Colors.lightBlue),
               title: const Text('Preimenuj'),
               onTap: () => Navigator.pop(context, 'edit'),
             ),
@@ -1003,7 +1019,7 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
               else if (!hasCats)
                 Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(14)),
+                  decoration: BoxDecoration(color: Colors.lightBlue.shade50, borderRadius: BorderRadius.circular(14)),
                   child: const Text(
                     'Nemaš nijednu mačku još. Klikni "Dodaj" da dodaš prvu.',
                     style: TextStyle(color: Colors.black54),
@@ -1027,11 +1043,11 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
                           duration: const Duration(milliseconds: 250),
                           width: 84,
                           decoration: BoxDecoration(
-                            color: selected ? Colors.deepOrange : Colors.white,
+                            color: selected ? Colors.lightBlue : Colors.white,
                             borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: selected ? Colors.deepOrange : Colors.orange.shade100, width: 2),
+                            border: Border.all(color: selected ? Colors.lightBlue : Colors.lightBlue.shade100, width: 2),
                             boxShadow: selected
-                                ? [BoxShadow(color: Colors.deepOrange.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))]
+                                ? [BoxShadow(color: Colors.lightBlue.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))]
                                 : [],
                           ),
                           child: Column(
@@ -1040,7 +1056,7 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
                               avatarPath != null
                                   ? CircleAvatar(
                                       radius: 16,
-                                      backgroundColor: selected ? Colors.white : Colors.orange.shade50,
+                                      backgroundColor: selected ? Colors.white : Colors.lightBlue.shade50,
                                       backgroundImage: FileImage(File(avatarPath)),
                                     )
                                   : const Text('🐈', style: TextStyle(fontSize: 26)),
@@ -1088,9 +1104,9 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
                       duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
                       decoration: BoxDecoration(
-                        color: selected ? Colors.deepOrange : Colors.white,
+                        color: selected ? Colors.lightBlue : Colors.white,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: selected ? Colors.deepOrange : Colors.orange.shade100, width: 2),
+                        border: Border.all(color: selected ? Colors.lightBlue : Colors.lightBlue.shade100, width: 2),
                       ),
                       child: Text('$grams g',
                           style: TextStyle(
@@ -1184,12 +1200,12 @@ class _CatMoodWidgetState extends State<CatMoodWidget> with SingleTickerProvider
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
                     colors: _showHappy
-                        ? [Colors.orange.shade300, Colors.orange.shade100]
-                        : [Colors.orange.shade100, Colors.orange.shade50],
+                        ? [Colors.lightBlue.shade300, Colors.lightBlue.shade100]
+                        : [Colors.lightBlue.shade100, Colors.lightBlue.shade50],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  boxShadow: [BoxShadow(color: Colors.deepOrange.withOpacity(0.2), blurRadius: 24, spreadRadius: 2)],
+                  boxShadow: [BoxShadow(color: Colors.lightBlue.withOpacity(0.2), blurRadius: 24, spreadRadius: 2)],
                 ),
                 child: Center(
                   child: AnimatedSwitcher(
@@ -1327,8 +1343,8 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
   Future<void> loadData() async {
     setState(() => isLoading = true);
     try {
-      final logsResponse = await http.get(Uri.parse('${widget.baseUrl}/feedinglogs'));
-      final schedulesResponse = await http.get(Uri.parse('${widget.baseUrl}/feedingschedules'));
+      final logsResponse = await http.get(Uri.parse('${widget.baseUrl}/feedinglogs'), headers: apiHeaders());
+      final schedulesResponse = await http.get(Uri.parse('${widget.baseUrl}/feedingschedules'), headers: apiHeaders());
       if (!mounted) return;
 
       if (logsResponse.statusCode == 200 && schedulesResponse.statusCode == 200) {
@@ -1392,7 +1408,7 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
     if (confirm != true) return;
 
     try {
-      final response = await http.delete(Uri.parse('${widget.baseUrl}/feedingschedules/$id'));
+      final response = await http.delete(Uri.parse('${widget.baseUrl}/feedingschedules/$id'), headers: apiHeaders());
       if (!mounted) return;
       if (response.statusCode == 200 || response.statusCode == 204) {
         await NotificationService.cancelForSchedule(id);
@@ -1439,7 +1455,7 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
         floatingActionButton: _tabController.index == 1
             ? FloatingActionButton.extended(
                 onPressed: () => openScheduleForm(),
-                backgroundColor: Colors.deepOrange,
+                backgroundColor: Colors.lightBlue,
                 icon: const Icon(Icons.add),
                 label: const Text('Novi raspored'),
               )
@@ -1501,7 +1517,7 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
                                   onTap: () => openScheduleForm(existing: schedule as Map<String, dynamic>),
                                   leading: const CircleAvatar(
                                     backgroundColor: Color(0xFFFFF3E0),
-                                    child: Icon(Icons.alarm, color: Colors.deepOrange),
+                                    child: Icon(Icons.alarm, color: Colors.lightBlue),
                                   ),
                                   title: Text('${catName(schedule['catId'])} • ${formatTime(schedule['time'])}',
                                       style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -1616,13 +1632,13 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
         final id = widget.existingSchedule!['id'];
         response = await http.put(
           Uri.parse('${widget.baseUrl}/feedingschedules/$id'),
-          headers: {'Content-Type': 'application/json'},
+          headers: apiHeaders(withJsonBody: true),
           body: json.encode(body),
         );
       } else {
         response = await http.post(
           Uri.parse('${widget.baseUrl}/feedingschedules'),
-          headers: {'Content-Type': 'application/json'},
+          headers: apiHeaders(withJsonBody: true),
           body: json.encode(body),
         );
       }
@@ -1662,7 +1678,7 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
               if (widget.cats.isEmpty)
                 Container(
                   padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(color: Colors.lightBlue.shade50, borderRadius: BorderRadius.circular(12)),
                   child: const Text('Nemaš nijednu mačku — dodaj je prvo na ekranu za hranjenje.'),
                 )
               else
@@ -1674,12 +1690,12 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
                     return ChoiceChip(
                       label: Text(cat.name),
                       selected: selected,
-                      selectedColor: Colors.deepOrange,
+                      selectedColor: Colors.lightBlue,
                       labelStyle: TextStyle(color: selected ? Colors.white : Colors.black87, fontWeight: FontWeight.w600),
                       backgroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: selected ? Colors.deepOrange : Colors.orange.shade100),
+                        side: BorderSide(color: selected ? Colors.lightBlue : Colors.lightBlue.shade100),
                       ),
                       onSelected: (_) => setState(() => selectedCatId = cat.id),
                     );
@@ -1697,11 +1713,11 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.orange.shade100, width: 2),
+                    border: Border.all(color: Colors.lightBlue.shade100, width: 2),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.access_time_rounded, color: Colors.deepOrange),
+                      const Icon(Icons.access_time_rounded, color: Colors.lightBlue),
                       const SizedBox(width: 12),
                       Text(selectedTime.format(context), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ],
@@ -1722,9 +1738,9 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
                       duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
                       decoration: BoxDecoration(
-                        color: selected ? Colors.deepOrange : Colors.white,
+                        color: selected ? Colors.lightBlue : Colors.white,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: selected ? Colors.deepOrange : Colors.orange.shade100, width: 2),
+                        border: Border.all(color: selected ? Colors.lightBlue : Colors.lightBlue.shade100, width: 2),
                       ),
                       child: Text('$grams g',
                           style: TextStyle(color: selected ? Colors.white : Colors.black87, fontWeight: FontWeight.w700)),
@@ -1744,12 +1760,12 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
                   return FilterChip(
                     label: Text(day['bs']!),
                     selected: selected,
-                    selectedColor: Colors.deepOrange,
+                    selectedColor: Colors.lightBlue,
                     labelStyle: TextStyle(color: selected ? Colors.white : Colors.black87, fontWeight: FontWeight.w600),
                     backgroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
-                      side: BorderSide(color: selected ? Colors.deepOrange : Colors.orange.shade100),
+                      side: BorderSide(color: selected ? Colors.lightBlue : Colors.lightBlue.shade100),
                     ),
                     onSelected: (isSelected) => setState(() {
                       if (isSelected) {
@@ -1794,6 +1810,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool isTesting = false;
   String? testResultMessage;
   bool? testResultSuccess;
+  bool showHelp = false;
 
   @override
   void initState() {
@@ -1820,7 +1837,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
     try {
       final response = await http
-          .get(Uri.parse('$_cleanedUrl/cats'))
+          .get(Uri.parse('$_cleanedUrl/cats'), headers: apiHeaders())
           .timeout(const Duration(seconds: 5));
       if (!mounted) return;
       setState(() {
@@ -1882,15 +1899,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: Colors.orange.shade100, width: 2),
+                    borderSide: BorderSide(color: Colors.lightBlue.shade100, width: 2),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: Colors.orange.shade100, width: 2),
+                    borderSide: BorderSide(color: Colors.lightBlue.shade100, width: 2),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Colors.deepOrange, width: 2),
+                    borderSide: const BorderSide(color: Colors.lightBlue, width: 2),
                   ),
                 ),
               ),
@@ -1905,13 +1922,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ? const SizedBox(
                               height: 16,
                               width: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.deepOrange),
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.lightBlue),
                             )
-                          : const Icon(Icons.wifi_tethering_rounded, color: Colors.deepOrange),
+                          : const Icon(Icons.wifi_tethering_rounded, color: Colors.lightBlue),
                       label: const Text('Testiraj konekciju'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.deepOrange,
-                        side: const BorderSide(color: Colors.deepOrange),
+                        foregroundColor: Colors.lightBlue,
+                        side: const BorderSide(color: Colors.lightBlue),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
@@ -1959,26 +1976,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     : const Text('Sačuvaj'),
               ),
 
-              const SizedBox(height: 34),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(14)),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Koju adresu staviti?', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                    SizedBox(height: 10),
-                    Text('• Android Emulator (testiranje na računaru):', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                    Text('  http://10.0.2.2:5103/api', style: TextStyle(fontFamily: 'monospace', fontSize: 13)),
-                    SizedBox(height: 10),
-                    Text('• Pravi telefon, ista WiFi mreža kao računar:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                    Text('  http://[LAN IP računara]:5103/api', style: TextStyle(fontFamily: 'monospace', fontSize: 13)),
-                    SizedBox(height: 4),
-                    Text('  (LAN IP nađeš sa "ipconfig" u terminalu, na primjer 192.168.1.50)',
-                        style: TextStyle(fontSize: 12, color: Colors.black54)),
-                  ],
+              const SizedBox(height: 20),
+              Center(
+                child: TextButton.icon(
+                  onPressed: () => setState(() => showHelp = !showHelp),
+                  icon: Icon(showHelp ? Icons.expand_less_rounded : Icons.help_outline_rounded, size: 18),
+                  label: Text(showHelp ? 'Sakrij pomoć' : 'Koju adresu staviti?'),
+                  style: TextButton.styleFrom(foregroundColor: Colors.black54),
                 ),
               ),
+
+              if (showHelp) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(color: Colors.lightBlue.shade50, borderRadius: BorderRadius.circular(14)),
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('• Android Emulator (testiranje na računaru):', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      Text('  http://10.0.2.2:5103/api', style: TextStyle(fontFamily: 'monospace', fontSize: 13)),
+                      SizedBox(height: 10),
+                      Text('• Pravi telefon, ista WiFi mreža kao računar:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      Text('  http://[LAN IP računara]:5103/api', style: TextStyle(fontFamily: 'monospace', fontSize: 13)),
+                      SizedBox(height: 4),
+                      Text('  (LAN IP nađeš sa "ipconfig" u terminalu, na primjer 192.168.1.50)',
+                          style: TextStyle(fontSize: 12, color: Colors.black54)),
+                    ],
+                ),
+              ),
+              ],
             ],
           ),
         ),
@@ -2021,7 +2048,7 @@ class _WeeklyFeedingChart extends StatelessWidget {
                   borderData: FlBorderData(show: false),
                   barTouchData: BarTouchData(
                     touchTooltipData: BarTouchTooltipData(
-                      getTooltipColor: (_) => Colors.deepOrange,
+                      getTooltipColor: (_) => Colors.lightBlue,
                       getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
                         '${rod.toY.toStringAsFixed(0)}g',
                         const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
@@ -2055,7 +2082,7 @@ class _WeeklyFeedingChart extends StatelessWidget {
                         barRods: [
                           BarChartRodData(
                             toY: entries[i].value,
-                            color: entries[i].value > 0 ? Colors.deepOrange : Colors.orange.shade100,
+                            color: entries[i].value > 0 ? Colors.lightBlue : Colors.lightBlue.shade100,
                             width: 20,
                             borderRadius: BorderRadius.circular(6),
                           ),

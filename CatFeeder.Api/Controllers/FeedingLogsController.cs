@@ -1,5 +1,6 @@
 using CatFeeder.Data.Modeli;
 using CatFeeder.Servis.Servisi;
+using CatFeeder.Api.Dtos;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CatFeeder.Api.Controllers
@@ -17,41 +18,46 @@ namespace CatFeeder.Api.Controllers
             _catServis = catServis;
         }
 
+        private static FeedingLogDto ToDto(FeedingLog log) => new(log.Id, log.CatId, log.Timestamp, log.PortionGrams, log.TriggeredBy);
+
         // 1. Dobavi kompletnu istoriju svih hranjenja
         [HttpGet]
-        public async Task<ActionResult<List<FeedingLog>>> GetAll()
+        public async Task<ActionResult<List<FeedingLogDto>>> GetAll()
         {
-            return await _logServis.GetAllAsync();
+            var logs = await _logServis.GetAllAsync();
+            return logs.Select(ToDto).ToList();
         }
 
         // 2. Dobavi istoriju hranjenja za tačno određenu mačku
         [HttpGet("cat/{catId}")]
-        public async Task<ActionResult<List<FeedingLog>>> GetByCatId(int catId)
+        public async Task<ActionResult<List<FeedingLogDto>>> GetByCatId(int catId)
         {
-            return await _logServis.GetByCatIdAsync(catId);
+            var logs = await _logServis.GetByCatIdAsync(catId);
+            return logs.Select(ToDto).ToList();
         }
 
         // 3. Zabilježi novo hranjenje
         [HttpPost]
-        public async Task<ActionResult<FeedingLog>> CreateLog(FeedingLog log)
+        public async Task<ActionResult<FeedingLogDto>> CreateLog(FeedingLogCreateDto dto)
         {
-            if (log.PortionGrams <= 0)
+            if (dto.PortionGrams <= 0)
                 return BadRequest(new { error = "Količina hrane mora biti veća od 0." });
 
-            var cat = await _catServis.GetByIdAsync(log.CatId);
+            var cat = await _catServis.GetByIdAsync(dto.CatId);
             if (cat == null)
-                return BadRequest(new { error = $"Mačka sa ID {log.CatId} ne postoji." });
+                return BadRequest(new { error = $"Mačka sa ID {dto.CatId} ne postoji." });
 
-            log.Cat = null; // Spriječavamo EF da pokuša kreirati novu mačku
-
-            if (log.Timestamp == DateTime.MinValue)
+            var log = new FeedingLog
             {
-                log.Timestamp = DateTime.Now;
-            }
+                CatId = dto.CatId,
+                PortionGrams = dto.PortionGrams,
+                TriggeredBy = dto.TriggeredBy,
+                Timestamp = dto.Timestamp ?? DateTime.Now,
+            };
 
             await _logServis.AddAsync(log);
 
-            return CreatedAtAction(nameof(GetAll), new { id = log.Id }, log);
+            return CreatedAtAction(nameof(GetAll), new { id = log.Id }, ToDto(log));
         }
     }
 }

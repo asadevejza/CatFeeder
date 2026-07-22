@@ -2,6 +2,7 @@ using CatFeeder.Data;
 using CatFeeder.Servis.Servisi;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,6 +52,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference(); // interaktivna dokumentacija na /scalar/v1
 }
 
 // Globalno hvatanje grešaka — umjesto generičkog 500 bez detalja,
@@ -76,6 +78,36 @@ app.UseExceptionHandler(errorApp =>
 // app.UseHttpsRedirection();
 
 app.UseCors("DozvoliSve");
+
+// Osnovna zaštita API-ja — svaki poziv na /api/* mora nositi ispravan X-Api-Key header.
+// Preskačemo OPTIONS (CORS preflight zahtjevi za Flutter Web ionako ne nose custom headere).
+var configuredApiKey = app.Configuration["ApiKey"];
+if (string.IsNullOrWhiteSpace(configuredApiKey))
+{
+    throw new InvalidOperationException(
+        "ApiKey nije podešen u appsettings.json. Dodaj npr. \"ApiKey\": \"tvoj-tajni-ključ\" u konfiguraciju prije pokretanja.");
+}
+
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.Value ?? string.Empty;
+    var isApiRoute = path.StartsWith("/api", StringComparison.OrdinalIgnoreCase);
+    var isPreflight = HttpMethods.IsOptions(context.Request.Method);
+
+    if (isApiRoute && !isPreflight)
+    {
+        var providedKey = context.Request.Headers["X-Api-Key"].ToString();
+        if (string.IsNullOrEmpty(providedKey) || providedKey != configuredApiKey)
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(new { error = "Nevažeći ili nedostajući API ključ." });
+            return;
+        }
+    }
+
+    await next();
+});
 
 app.UseAuthorization();
 

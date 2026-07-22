@@ -1,6 +1,7 @@
 using CatFeeder.Servis.Servisi;
 using Microsoft.AspNetCore.Mvc;
 using CatFeeder.Data.Modeli;
+using CatFeeder.Api.Dtos;
 
 namespace CatFeeder.Api.Controllers
 {
@@ -17,50 +18,64 @@ namespace CatFeeder.Api.Controllers
             _catServis = catServis;
         }
 
+        private static FeedingScheduleDto ToDto(FeedingSchedule s) => new(s.Id, s.CatId, s.Time, s.PortionGrams, s.DaysOfWeek);
+
         [HttpGet]
-        public async Task<ActionResult<List<FeedingSchedule>>> GetSchedules()
+        public async Task<ActionResult<List<FeedingScheduleDto>>> GetSchedules()
         {
-            return await _scheduleServis.GetAllAsync();
+            var schedules = await _scheduleServis.GetAllAsync();
+            return schedules.Select(ToDto).ToList();
         }
 
         [HttpGet("cat/{catId}")]
-        public async Task<ActionResult<List<FeedingSchedule>>> GetByCatId(int catId)
+        public async Task<ActionResult<List<FeedingScheduleDto>>> GetByCatId(int catId)
         {
-            return await _scheduleServis.GetByCatIdAsync(catId);
+            var schedules = await _scheduleServis.GetByCatIdAsync(catId);
+            return schedules.Select(ToDto).ToList();
         }
 
         [HttpPost]
-        public async Task<ActionResult<FeedingSchedule>> CreateSchedule(FeedingSchedule schedule)
+        public async Task<ActionResult<FeedingScheduleDto>> CreateSchedule(FeedingScheduleCreateDto dto)
         {
-            if (schedule.PortionGrams <= 0)
+            if (dto.PortionGrams <= 0)
                 return BadRequest(new { error = "Količina hrane mora biti veća od 0." });
 
-            var cat = await _catServis.GetByIdAsync(schedule.CatId);
+            var cat = await _catServis.GetByIdAsync(dto.CatId);
             if (cat == null)
-                return BadRequest(new { error = $"Mačka sa ID {schedule.CatId} ne postoji." });
+                return BadRequest(new { error = $"Mačka sa ID {dto.CatId} ne postoji." });
 
-            // Osigurajmo da EF ne pokuša ponovo kreirati objekat mačke u bazi
-            schedule.Cat = null;
+            var schedule = new FeedingSchedule
+            {
+                CatId = dto.CatId,
+                Time = dto.Time,
+                PortionGrams = dto.PortionGrams,
+                DaysOfWeek = dto.DaysOfWeek,
+            };
 
             await _scheduleServis.AddAsync(schedule);
 
-            return CreatedAtAction(nameof(GetSchedules), new { id = schedule.Id }, schedule);
+            return CreatedAtAction(nameof(GetSchedules), new { id = schedule.Id }, ToDto(schedule));
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateSchedule(int id, FeedingSchedule schedule)
+        public async Task<IActionResult> UpdateSchedule(int id, FeedingScheduleUpdateDto dto)
         {
-            if (id != schedule.Id)
-                return BadRequest(new { error = "ID u putanji i tijelu zahtjeva se ne poklapaju." });
-
-            if (schedule.PortionGrams <= 0)
+            if (dto.PortionGrams <= 0)
                 return BadRequest(new { error = "Količina hrane mora biti veća od 0." });
 
             var existing = await _scheduleServis.GetByIdAsync(id);
             if (existing == null) return NotFound();
 
-            schedule.Cat = null;
-            await _scheduleServis.UpdateAsync(schedule);
+            var cat = await _catServis.GetByIdAsync(dto.CatId);
+            if (cat == null)
+                return BadRequest(new { error = $"Mačka sa ID {dto.CatId} ne postoji." });
+
+            existing.CatId = dto.CatId;
+            existing.Time = dto.Time;
+            existing.PortionGrams = dto.PortionGrams;
+            existing.DaysOfWeek = dto.DaysOfWeek;
+
+            await _scheduleServis.UpdateAsync(existing);
             return NoContent();
         }
 

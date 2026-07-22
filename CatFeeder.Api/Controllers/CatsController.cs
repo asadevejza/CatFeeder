@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using CatFeeder.Data.Modeli;
 using CatFeeder.Servis.Servisi;
+using CatFeeder.Api.Dtos;
 
 namespace CatFeeder.Api.Controllers
 {
@@ -15,43 +16,48 @@ namespace CatFeeder.Api.Controllers
             _catServis = catServis;
         }
 
+        private static CatDto ToDto(Cat cat) => new(cat.Id, cat.Name, cat.RfidTag);
+
         [HttpGet]
-        public async Task<ActionResult<List<Cat>>> GetCats()
+        public async Task<ActionResult<List<CatDto>>> GetCats()
         {
-            return await _catServis.GetAllAsync();
+            var cats = await _catServis.GetAllAsync();
+            return cats.Select(ToDto).ToList();
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Cat>> GetCat(int id)
+        public async Task<ActionResult<CatDto>> GetCat(int id)
         {
             var cat = await _catServis.GetByIdAsync(id);
             if (cat == null) return NotFound();
-            return cat;
+            return ToDto(cat);
         }
 
         [HttpPost]
-        public async Task<ActionResult<Cat>> CreateCat(Cat cat)
+        public async Task<ActionResult<CatDto>> CreateCat(CatCreateDto dto)
         {
-            if (string.IsNullOrWhiteSpace(cat.Name))
+            if (string.IsNullOrWhiteSpace(dto.Name))
                 return BadRequest(new { error = "Ime mačke je obavezno." });
 
+            var cat = new Cat { Name = dto.Name, RfidTag = dto.RfidTag };
             await _catServis.AddAsync(cat);
-            return CreatedAtAction(nameof(GetCat), new { id = cat.Id }, cat);
+
+            return CreatedAtAction(nameof(GetCat), new { id = cat.Id }, ToDto(cat));
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateCat(int id, Cat cat)
+        public async Task<IActionResult> UpdateCat(int id, CatUpdateDto dto)
         {
-            if (id != cat.Id)
-                return BadRequest(new { error = "ID u putanji i tijelu zahtjeva se ne poklapaju." });
-
-            if (string.IsNullOrWhiteSpace(cat.Name))
+            if (string.IsNullOrWhiteSpace(dto.Name))
                 return BadRequest(new { error = "Ime mačke je obavezno." });
 
             var existing = await _catServis.GetByIdAsync(id);
             if (existing == null) return NotFound();
 
-            await _catServis.UpdateAsync(cat);
+            existing.Name = dto.Name;
+            existing.RfidTag = dto.RfidTag;
+            await _catServis.UpdateAsync(existing);
+
             return NoContent();
         }
 
