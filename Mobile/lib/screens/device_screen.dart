@@ -20,6 +20,7 @@ class DeviceScreen extends StatelessWidget {
   final Future<bool> Function(int id) onDeleteCat;
   final void Function(int catId) onSelectCat;
   final void Function(int grams) onFedSuccess;
+  final Map<int, Map<String, dynamic>> feedingSummaryByCat;
 
   const DeviceScreen({
     super.key,
@@ -38,6 +39,7 @@ class DeviceScreen extends StatelessWidget {
     required this.onDeleteCat,
     required this.onSelectCat,
     required this.onFedSuccess,
+    required this.feedingSummaryByCat
   });
 
   String get _catName {
@@ -82,6 +84,7 @@ class DeviceScreen extends StatelessWidget {
                       onEditCat: onEditCat,
                       onDeleteCat: onDeleteCat,
                       onFedSuccess: onFedSuccess,
+                       feedingSummaryByCat: feedingSummaryByCat
                     ),
                   ),
                 ),

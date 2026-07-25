@@ -60,21 +60,40 @@ class DashboardScreen extends StatelessWidget {
                         itemBuilder: (context, index) {
                           final cat = cats[index];
                           final selected = cat.id == selectedCatId;
+                          final fedToday = ((feedingSummaryByCat[cat.id]?['todayGrams'] as int?) ?? 0) > 0;
                           return GestureDetector(
                             onTap: () => onSelectCat(cat.id),
                             child: Column(
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(2),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: selected ? Colors.lightBlue : Colors.transparent, width: 2),
-                                  ),
-                                  child: CircleAvatar(
-                                    radius: 22,
-                                    backgroundColor: Colors.lightBlue.shade50,
-                                    child: const Text('🐈', style: TextStyle(fontSize: 20)),
-                                  ),
+                                Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: selected ? Colors.lightBlue : Colors.transparent, width: 2),
+                                      ),
+                                      child: CircleAvatar(
+                                        radius: 22,
+                                        backgroundColor: Colors.lightBlue.shade50,
+                                        child: const Text('🐈', style: TextStyle(fontSize: 20)),
+                                      ),
+                                    ),
+                                    if (fedToday)
+                                      Positioned(
+                                        bottom: 0,
+                                        right: -4,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(2),
+                                          decoration: const BoxDecoration(
+                                            color: Colors.white,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(Icons.check_circle, size: 14, color: Colors.green),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                                 const SizedBox(height: 6),
                                 Text(cat.name,

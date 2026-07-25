@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../api_config.dart';
 import '../models/cat.dart';
 import '../services/notification_service.dart';
+import '../widgets/empty_state.dart';
 import 'schedule_form_screen.dart';
 
 class SchedulesAndLogsScreen extends StatefulWidget {
@@ -300,16 +301,12 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
           ),
           const SizedBox(height: 14),
           if (items.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.grey.shade100),
-              ),
-              child: const Center(
-                child: Text('Nema zakazanih hranjenja za ovaj dan.', style: TextStyle(color: Colors.black45)),
-              ),
+            EmptyState(
+              icon: Icons.calendar_today_rounded,
+              title: 'Nema zakazanih hranjenja',
+              subtitle: 'Za ovaj dan nemaš nijedan raspored. Dodaj ga na tabu "Rasporedi".',
+              actionLabel: 'Idi na Rasporede',
+              onAction: () => _tabController.animateTo(2),
             )
           else
             ...items.map((item) {
@@ -400,8 +397,12 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
                         }
                         if (logs.isEmpty) {
                           return const Padding(
-                            padding: EdgeInsets.all(40),
-                            child: Center(child: Text('Nema zabilježenih hranjenja.')),
+                            padding: EdgeInsets.only(top: 12),
+                            child: EmptyState(
+                              icon: Icons.restaurant_rounded,
+                              title: 'Nema zabilježenih hranjenja',
+                              subtitle: 'Čim nahraniš mačku (ručno ili preko rasporeda), pojaviće se ovdje.',
+                            ),
                           );
                         }
                         final log = logs[index - 1];
@@ -427,9 +428,18 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
                   RefreshIndicator(
                     onRefresh: loadData,
                     child: schedules.isEmpty
-                        ? ListView(children: const [
-                            Padding(padding: EdgeInsets.all(40), child: Center(child: Text('Nema aktivnih rasporeda.')))
-                          ])
+                        ? ListView(
+                            padding: const EdgeInsets.all(18),
+                            children: [
+                              EmptyState(
+                                icon: Icons.alarm_add_rounded,
+                                title: 'Nema rasporeda',
+                                subtitle: 'Zakaži automatsko hranjenje po danima u sedmici i tačnom vremenu.',
+                                actionLabel: 'Novi raspored',
+                                onAction: () => openScheduleForm(),
+                              ),
+                            ],
+                          )
                         : ListView.builder(
                             padding: const EdgeInsets.only(left: 12, right: 12, top: 12, bottom: 90),
                             itemCount: schedules.length,

@@ -161,7 +161,7 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
                       labelStyle: TextStyle(color: selected ? Colors.white : Colors.black87, fontWeight: FontWeight.w600),
                       backgroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(100),
                         side: BorderSide(color: selected ? Colors.lightBlue : Colors.lightBlue.shade100),
                       ),
                       onSelected: (_) => setState(() => selectedCatId = cat.id),
@@ -206,7 +206,7 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
                       decoration: BoxDecoration(
                         color: selected ? Colors.lightBlue : Colors.white,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(100),
                         border: Border.all(color: selected ? Colors.lightBlue : Colors.lightBlue.shade100, width: 2),
                       ),
                       child: Text('$grams g',
@@ -231,7 +231,7 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
                     labelStyle: TextStyle(color: selected ? Colors.white : Colors.black87, fontWeight: FontWeight.w600),
                     backgroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(100),
                       side: BorderSide(color: selected ? Colors.lightBlue : Colors.lightBlue.shade100),
                     ),
                     onSelected: (isSelected) => setState(() {

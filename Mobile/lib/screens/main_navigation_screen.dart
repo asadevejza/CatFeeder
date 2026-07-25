@@ -3,15 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../api_config.dart';
 import '../models/cat.dart';
-import '../models/cat_profile.dart';
 import '../services/settings_service.dart';
 import '../services/notification_service.dart';
-import '../services/profile_service.dart';
+import 'dashboard_screen.dart';
 import 'device_screen.dart';
-import 'care_screen.dart';
-import 'services_screen.dart';
+import 'schedules_and_logs_screen.dart';
 import 'settings_screen.dart';
-import 'onboarding_screen.dart';
 
 // ================= GLAVNA NAVIGACIJA + DIJELJENO STANJE =================
 class MainNavigationScreen extends StatefulWidget {
@@ -39,9 +36,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int? selectedCatId;
   bool isLoadingCats = true;
 
-  // Onboarding: null dok se ne provjeri lokalno stanje, zatim true/false.
-  bool? onboardingComplete;
-
   // Svaki uspješan feed povećava ovaj brojač — animirana mačka to koristi
   // kao okidač da odigra animaciju, čak i ako je "raspoloženje" isto kao prije.
   int feedTrigger = 0;
@@ -58,13 +52,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     NotificationService.requestPermissions();
     fetchSensorData();
     fetchCats();
-    _checkOnboarding();
-  }
-
-  Future<void> _checkOnboarding() async {
-    final done = await ProfileService.isOnboardingComplete();
-    if (!mounted) return;
-    setState(() => onboardingComplete = done);
   }
 
   Future<void> fetchSensorData() async {
@@ -138,7 +125,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
-  // catId -> {'lastFed': DateTime?, 'todayGrams': int, 'mealCount': int} — za Care Dashboard i "MY PET" traku.
+  // catId -> {'lastFed': DateTime?, 'todayGrams': int} — za "MY PET" traku na Dashboard-u
   Map<int, Map<String, dynamic>> feedingSummaryByCat = {};
 
   Future<void> fetchFeedingSummary() async {
@@ -154,7 +141,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       for (final cat in cats) {
         DateTime? lastFed;
         int todayGrams = 0;
-        int mealCount = 0;
 
         for (final log in allLogs) {
           if (log['catId'] != cat.id) continue;
@@ -170,11 +156,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           if (lastFed == null || ts.isAfter(lastFed)) lastFed = ts;
           if (ts.year == today.year && ts.month == today.month && ts.day == today.day) {
             todayGrams += (log['portionGrams'] as num?)?.toInt() ?? 0;
-            mealCount++;
           }
         }
 
-        summary[cat.id] = {'lastFed': lastFed, 'todayGrams': todayGrams, 'mealCount': mealCount};
+        summary[cat.id] = {'lastFed': lastFed, 'todayGrams': todayGrams};
       }
 
       if (!mounted) return;
@@ -200,20 +185,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     } catch (_) {
       return false;
     }
-  }
-
-  // Kreira mačku na backendu (samo ime) i lokalno čuva prošireni profil
-  // (spol, rasa, godine, težina) koji backend trenutno ne podržava.
-  Future<bool> addCatWithProfile(String name, CatProfile profile) async {
-    final created = await addCat(name);
-    if (!created) return false;
-    final match = cats.where((c) => c.name == name);
-    final newCatId = match.isNotEmpty ? match.last.id : (cats.isNotEmpty ? cats.last.id : null);
-    if (newCatId != null) {
-      await ProfileService.saveCatProfile(newCatId, profile);
-      selectCat(newCatId);
-    }
-    return true;
   }
 
   Future<bool> editCat(int id, String newName) async {
@@ -242,7 +213,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         setState(() {
           if (selectedCatId == id) selectedCatId = null;
         });
-        await ProfileService.deleteCatProfile(id);
         await fetchCats();
         return true;
       }
@@ -281,71 +251,53 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     fetchCats();
   }
 
-  // Poziva se sa uvodnog ekrana (onboarding) — čuva ime vlasnika, kreira prvu
-  // mačku sa proširenim profilom, i označava onboarding kao završen.
-  Future<void> _finishOnboarding({
-    required String ownerName,
-    required String catName,
-    required CatProfile catProfile,
-  }) async {
-    await ProfileService.saveOwnerName(ownerName);
-    await addCatWithProfile(catName, catProfile);
-    await ProfileService.setOnboardingComplete();
-    if (!mounted) return;
-    setState(() => onboardingComplete = true);
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (onboardingComplete == null) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFF7FAFC),
-        body: Center(child: CircularProgressIndicator(color: Colors.lightBlue)),
-      );
-    }
-
-    if (onboardingComplete == false) {
-      return OnboardingScreen(onFinish: _finishOnboarding);
-    }
-
     final screens = [
-      DeviceScreen(
-        foodLevel: foodLevel,
-        waterLevel: waterLevel,
-        temp: temp,
-        humidity: humidity,
-        isLoading: isLoadingDashboard,
-        onRefresh: () async {
-          await fetchSensorData();
-          await fetchFeedingSummary();
-        },
-        cats: cats,
-        selectedCatId: selectedCatId,
-        baseUrl: baseUrl,
-        feedTrigger: feedTrigger,
-        onAddCat: addCat,
-        onEditCat: editCat,
-        onDeleteCat: deleteCat,
-        onSelectCat: selectCat,
-        onFedSuccess: applyLocalFeedEffect,
-      ),
-      CareScreen(
-        cats: cats,
-        selectedCatId: selectedCatId,
-        onSelectCat: selectCat,
-        feedingSummaryByCat: feedingSummaryByCat,
-        waterLevel: waterLevel,
-        onAddCat: addCatWithProfile,
-        baseUrl: baseUrl,
-      ),
-      ServicesScreen(baseUrl: baseUrl, cats: cats),
-      SettingsScreen(
-        currentBaseUrl: baseUrl,
-        onSave: updateBaseUrl,
-        cats: cats,
-        onAddCat: (name, profile) => addCatWithProfile(name, profile as CatProfile),
-      ),
-    ];
+  DashboardScreen(
+    foodLevel: foodLevel,
+    waterLevel: waterLevel,
+    temp: temp,
+    humidity: humidity,
+    isLoading: isLoadingDashboard,
+    onRefresh: () async {
+      await fetchSensorData();
+      await fetchFeedingSummary();
+    },
+    cats: cats,
+    selectedCatId: selectedCatId,
+    onSelectCat: selectCat,
+    feedingSummaryByCat: feedingSummaryByCat,
+  ),
+  DeviceScreen(
+    foodLevel: foodLevel,
+    waterLevel: waterLevel,
+    temp: temp,
+    humidity: humidity,
+    isLoading: isLoadingDashboard,
+    onRefresh: () async {
+      await fetchSensorData();
+      await fetchFeedingSummary();
+    },
+    cats: cats,
+    selectedCatId: selectedCatId,
+    baseUrl: baseUrl,
+    feedTrigger: feedTrigger,
+    onAddCat: addCat,
+    onEditCat: editCat,
+    onDeleteCat: deleteCat,
+    onSelectCat: selectCat,
+    onFedSuccess: applyLocalFeedEffect,
+    feedingSummaryByCat: feedingSummaryByCat,
+  ),
+  SchedulesAndLogsScreen(baseUrl: baseUrl, cats: cats),
+  SettingsScreen(
+    currentBaseUrl: baseUrl, 
+    onSave: updateBaseUrl,
+    cats: cats,         // <-- Dodaj ovo
+    onAddCat: (name, profile) => addCat(name), // <-- Dodaj ovo
+  ),
+];
 
     return Scaffold(
       body: screens[_selectedIndex],
@@ -364,10 +316,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             backgroundColor: Colors.white,
             type: BottomNavigationBarType.fixed,
             items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.videocam_rounded), label: 'Device'),
-              BottomNavigationBarItem(icon: Icon(Icons.favorite_rounded), label: 'Care'),
-              BottomNavigationBarItem(icon: Icon(Icons.storefront_rounded), label: 'Services'),
-              BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Me'),
+              BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Status'),
+              BottomNavigationBarItem(icon: Icon(Icons.pets_rounded), label: 'Hrani'),
+              BottomNavigationBarItem(icon: Icon(Icons.history_rounded), label: 'Aktivnosti'),
+              BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Ja'),
             ],
           ),
         ),

@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../api_config.dart';
 import '../models/cat.dart';
 import '../services/cat_avatar_service.dart';
+import '../widgets/empty_state.dart';
 
 class ManualFeedingScreen extends StatefulWidget {
   final String baseUrl;
@@ -18,6 +19,7 @@ class ManualFeedingScreen extends StatefulWidget {
   final Future<bool> Function(int id, String newName) onEditCat;
   final Future<bool> Function(int id) onDeleteCat;
   final void Function(int grams) onFedSuccess;
+  final Map<int, Map<String, dynamic>> feedingSummaryByCat;
 
   const ManualFeedingScreen({
     super.key,
@@ -31,6 +33,7 @@ class ManualFeedingScreen extends StatefulWidget {
     required this.onEditCat,
     required this.onDeleteCat,
     required this.onFedSuccess,
+    required this.feedingSummaryByCat,
   });
 
   @override
@@ -280,13 +283,12 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
               if (widget.isLoadingCats)
                 const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
               else if (!hasCats)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: Colors.lightBlue.shade50, borderRadius: BorderRadius.circular(14)),
-                  child: const Text(
-                    'Nemaš nijednu mačku još. Klikni "Dodaj" da dodaš prvu.',
-                    style: TextStyle(color: Colors.black54),
-                  ),
+                EmptyState(
+                  icon: Icons.pets_rounded,
+                  title: 'Nemaš nijednu mačku',
+                  subtitle: 'Dodaj svoju prvu mačku da počneš sa hranjenjem.',
+                  actionLabel: 'Dodaj mačku',
+                  onAction: showAddCatDialog,
                 )
               else
                 SizedBox(
@@ -299,6 +301,7 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
                       final cat = widget.cats[index];
                       final selected = cat.id == widget.selectedCatId;
                       final avatarPath = avatarPaths[cat.id];
+                      final fedToday = ((widget.feedingSummaryByCat[cat.id]?['todayGrams'] as int?) ?? 0) > 0;
                       return GestureDetector(
                         onTap: () => widget.onSelectCat(cat.id),
                         onLongPress: () => showManageCatDialog(cat),
@@ -316,13 +319,32 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              avatarPath != null
-                                  ? CircleAvatar(
-                                      radius: 16,
-                                      backgroundColor: selected ? Colors.white : Colors.lightBlue.shade50,
-                                      backgroundImage: FileImage(File(avatarPath)),
-                                    )
-                                  : const Text('🐈', style: TextStyle(fontSize: 26)),
+                              Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  avatarPath != null
+                                      ? CircleAvatar(
+                                          radius: 16,
+                                          backgroundColor: selected ? Colors.white : Colors.lightBlue.shade50,
+                                          backgroundImage: FileImage(File(avatarPath)),
+                                        )
+                                      : const Text('🐈', style: TextStyle(fontSize: 26)),
+                                  if (fedToday)
+                                    Positioned(
+                                      bottom: -2,
+                                      right: -6,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: BoxDecoration(
+                                          color: selected ? Colors.lightBlue : Colors.white,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: selected ? Colors.white : Colors.white, width: 1.5),
+                                        ),
+                                        child: const Icon(Icons.check_circle, size: 13, color: Colors.green),
+                                      ),
+                                    ),
+                                ],
+                              ),
                               const SizedBox(height: 4),
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -368,7 +390,7 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
                       decoration: BoxDecoration(
                         color: selected ? Colors.lightBlue : Colors.white,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(100),
                         border: Border.all(color: selected ? Colors.lightBlue : Colors.lightBlue.shade100, width: 2),
                       ),
                       child: Text('$grams g',
