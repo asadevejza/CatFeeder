@@ -24,12 +24,11 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
   bool isLoading = true;
 
   late final TabController _tabController;
-  DateTime selectedDay = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() => setState(() {})); // za prikaz/skrivanje FAB-a
     loadData();
   }
@@ -43,50 +42,6 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
   String catName(dynamic catId) {
     final match = widget.cats.where((c) => c.id == catId);
     return match.isNotEmpty ? match.first.name : 'Nepoznata mačka';
-  }
-
-  static const List<String> _weekdayEnglish = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
-  ];
-  static const List<String> _dayLetters = ['P', 'U', 'S', 'Č', 'P', 'S', 'N'];
-
-  bool _isSameDate(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
-
-  // Dana u sedmici (ponedjeljak - nedjelja) koja sadrži danas.
-  List<DateTime> _currentWeekDates() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final startOfWeek = today.subtract(Duration(days: today.weekday - 1));
-    return List.generate(7, (i) => startOfWeek.add(Duration(days: i)));
-  }
-
-  // Rasporedi koji padaju na dati dan, sa flagom da li je već stvarno nahranjeno
-  // taj dan (postoji li feeding log za tu mačku na taj datum).
-  List<Map<String, dynamic>> _scheduleItemsForDay(DateTime day) {
-    final dayName = _weekdayEnglish[day.weekday - 1];
-    final items = <Map<String, dynamic>>[];
-
-    for (final schedule in schedules) {
-      final daysCsv = (schedule['daysOfWeek'] as String?) ?? '';
-      final scheduleDays = daysCsv.split(',').map((d) => d.trim());
-      if (!scheduleDays.contains(dayName)) continue;
-
-      final catId = schedule['catId'];
-      final done = logs.any((log) {
-        if (log['catId'] != catId) return false;
-        final rawTimestamp = log['timestamp'];
-        if (rawTimestamp == null) return false;
-        try {
-          final logDate = DateTime.parse(rawTimestamp.toString());
-          return _isSameDate(logDate, day);
-        } catch (_) {
-          return false;
-        }
-      });
-
-      items.add({'schedule': schedule, 'done': done});
-    }
-    return items;
   }
 
   // Zbraja ukupne grame hrane po danu, za posljednjih 7 dana (uključujući danas).
@@ -243,118 +198,6 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
     if (saved == true) loadData();
   }
 
-  Widget _buildCareListTab() {
-    final week = _currentWeekDates();
-    final items = _scheduleItemsForDay(selectedDay);
-    final doneCount = items.where((i) => i['done'] == true).length;
-    final progress = items.isEmpty ? 0 : (doneCount / items.length * 100).round();
-
-    return RefreshIndicator(
-      onRefresh: loadData,
-      child: ListView(
-        padding: const EdgeInsets.all(18),
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: week.map((date) {
-              final selected = _isSameDate(date, selectedDay);
-              final isToday = _isSameDate(date, DateTime.now());
-              return GestureDetector(
-                onTap: () => setState(() => selectedDay = date),
-                child: Column(
-                  children: [
-                    Text(_dayLetters[date.weekday - 1],
-                        style: const TextStyle(fontSize: 12, color: Colors.black45, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 8),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: selected ? Colors.lightBlue : (isToday ? Colors.lightBlue.shade50 : Colors.transparent),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '${date.day}',
-                        style: TextStyle(
-                          color: selected ? Colors.white : Colors.black87,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 26),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Zadaci za taj dan', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-              if (items.isNotEmpty)
-                Text('Napredak $progress%',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.lightBlue)),
-            ],
-          ),
-          const SizedBox(height: 14),
-          if (items.isEmpty)
-            EmptyState(
-              icon: Icons.calendar_today_rounded,
-              title: 'Nema zakazanih hranjenja',
-              subtitle: 'Za ovaj dan nemaš nijedan raspored. Dodaj ga na tabu "Rasporedi".',
-              actionLabel: 'Idi na Rasporede',
-              onAction: () => _tabController.animateTo(2),
-            )
-          else
-            ...items.map((item) {
-              final schedule = item['schedule'];
-              final done = item['done'] as bool;
-              final time = formatTime(schedule['time']);
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: done ? Colors.lightBlue.shade100 : Colors.grey.shade100),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      done ? Icons.check_circle : Icons.circle_outlined,
-                      color: done ? Colors.lightBlue : Colors.grey.shade300,
-                      size: 26,
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${catName(schedule['catId'])} • $time',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              decoration: done ? TextDecoration.lineThrough : null,
-                              color: done ? Colors.black38 : Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text('${schedule['portionGrams']}g', style: const TextStyle(fontSize: 12, color: Colors.black45)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -366,13 +209,12 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
             unselectedLabelColor: Colors.black45,
             indicatorColor: Colors.lightBlue,
             tabs: const [
-              Tab(text: 'Njega'),
               Tab(text: 'Historija'),
               Tab(text: 'Rasporedi'),
             ],
           ),
         ),
-        floatingActionButton: _tabController.index == 2
+        floatingActionButton: _tabController.index == 1
             ? FloatingActionButton.extended(
                 onPressed: () => openScheduleForm(),
                 backgroundColor: Colors.lightBlue,
@@ -385,7 +227,6 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
             : TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildCareListTab(),
                   RefreshIndicator(
                     onRefresh: loadData,
                     child: ListView.builder(

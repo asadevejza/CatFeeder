@@ -5,8 +5,8 @@ import '../api_config.dart';
 import '../models/cat.dart';
 import '../services/settings_service.dart';
 import '../services/notification_service.dart';
-import 'dashboard_screen.dart';
 import 'device_screen.dart';
+import 'feeding_screen.dart';
 import 'schedules_and_logs_screen.dart';
 import 'settings_screen.dart';
 
@@ -222,7 +222,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
-  // Poziva se iz ManualFeedingScreen nakon uspješnog POST-a ka /feedinglogs.
+  // Poziva se iz FeedingScreen nakon uspješnog POST-a ka /feedinglogs.
   // Lokalno spušta nivo hrane (dok ESP32 ne bude sam slao stvarna očitavanja)
   // i pokreće animaciju sretne mačke.
   void applyLocalFeedEffect(int grams) {
@@ -254,50 +254,33 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     final screens = [
-  DashboardScreen(
-    foodLevel: foodLevel,
-    waterLevel: waterLevel,
-    temp: temp,
-    humidity: humidity,
-    isLoading: isLoadingDashboard,
-    onRefresh: () async {
-      await fetchSensorData();
-      await fetchFeedingSummary();
-    },
-    cats: cats,
-    selectedCatId: selectedCatId,
-    onSelectCat: selectCat,
-    feedingSummaryByCat: feedingSummaryByCat,
-  ),
-  DeviceScreen(
-    foodLevel: foodLevel,
-    waterLevel: waterLevel,
-    temp: temp,
-    humidity: humidity,
-    isLoading: isLoadingDashboard,
-    onRefresh: () async {
-      await fetchSensorData();
-      await fetchFeedingSummary();
-    },
-    cats: cats,
-    selectedCatId: selectedCatId,
-    baseUrl: baseUrl,
-    feedTrigger: feedTrigger,
-    onAddCat: addCat,
-    onEditCat: editCat,
-    onDeleteCat: deleteCat,
-    onSelectCat: selectCat,
-    onFedSuccess: applyLocalFeedEffect,
-    feedingSummaryByCat: feedingSummaryByCat,
-  ),
-  SchedulesAndLogsScreen(baseUrl: baseUrl, cats: cats),
-  SettingsScreen(
-    currentBaseUrl: baseUrl, 
-    onSave: updateBaseUrl,
-    cats: cats,         // <-- Dodaj ovo
-    onAddCat: (name, profile) => addCat(name), // <-- Dodaj ovo
-  ),
-];
+      DeviceScreen(
+        foodLevel: foodLevel,
+        waterLevel: waterLevel,
+        temp: temp,
+        humidity: humidity,
+        isLoading: isLoadingDashboard,
+        onRefresh: () async {
+          await fetchSensorData();
+          await fetchFeedingSummary();
+        },
+      ),
+      FeedingScreen(
+        baseUrl: baseUrl,
+        cats: cats,
+        isLoadingCats: isLoadingCats,
+        selectedCatId: selectedCatId,
+        feedTrigger: feedTrigger,
+        onSelectCat: selectCat,
+        onAddCat: addCat,
+        onEditCat: editCat,
+        onDeleteCat: deleteCat,
+        onFedSuccess: applyLocalFeedEffect,
+        feedingSummaryByCat: feedingSummaryByCat,
+      ),
+      SchedulesAndLogsScreen(baseUrl: baseUrl, cats: cats),
+      SettingsScreen(currentBaseUrl: baseUrl, onSave: updateBaseUrl),
+    ];
 
     return Scaffold(
       body: screens[_selectedIndex],
@@ -316,7 +299,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             backgroundColor: Colors.white,
             type: BottomNavigationBarType.fixed,
             items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Status'),
+              BottomNavigationBarItem(icon: Icon(Icons.inventory_2_rounded), label: 'Uređaji'),
               BottomNavigationBarItem(icon: Icon(Icons.pets_rounded), label: 'Hrani'),
               BottomNavigationBarItem(icon: Icon(Icons.history_rounded), label: 'Aktivnosti'),
               BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Ja'),
