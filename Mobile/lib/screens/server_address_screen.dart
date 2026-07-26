@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../api_config.dart';
+import '../theme/app_colors.dart';
 
 class ServerAddressScreen extends StatefulWidget {
   final String currentBaseUrl;
@@ -108,15 +109,15 @@ class _ServerAddressScreenState extends State<ServerAddressScreen> {
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: Colors.lightBlue.shade100, width: 2),
+                    borderSide: BorderSide(color: AppColors.tint100, width: 2),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: Colors.lightBlue.shade100, width: 2),
+                    borderSide: BorderSide(color: AppColors.tint100, width: 2),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Colors.lightBlue, width: 2),
+                    borderSide: const BorderSide(color: AppColors.primary, width: 2),
                   ),
                 ),
               ),
@@ -131,13 +132,13 @@ class _ServerAddressScreenState extends State<ServerAddressScreen> {
                           ? const SizedBox(
                               height: 16,
                               width: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.lightBlue),
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
                             )
-                          : const Icon(Icons.wifi_tethering_rounded, color: Colors.lightBlue),
+                          : const Icon(Icons.wifi_tethering_rounded, color: AppColors.primary),
                       label: const Text('Testiraj konekciju'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.lightBlue,
-                        side: const BorderSide(color: Colors.lightBlue),
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
@@ -199,7 +200,7 @@ class _ServerAddressScreenState extends State<ServerAddressScreen> {
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: Colors.lightBlue.shade50, borderRadius: BorderRadius.circular(14)),
+                  decoration: BoxDecoration(color: AppColors.tint50, borderRadius: BorderRadius.circular(14)),
                   child: const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

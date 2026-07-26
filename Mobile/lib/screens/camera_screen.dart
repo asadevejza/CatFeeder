@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/profile_service.dart';
+import '../theme/app_colors.dart';
 
 // NAPOMENA: hranilica (ESP32 firmver u ovom projektu) trenutno nema kameru
 // niti video stream. Ovaj ekran je UI za uparivanje i prikaz kamere u istom
@@ -86,16 +87,16 @@ class _PairingPrompt extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(color: Colors.lightBlue.shade50, shape: BoxShape.circle),
+              decoration: BoxDecoration(color: AppColors.tint50, shape: BoxShape.circle),
               child: Icon(
                 isPairing ? Icons.wifi_tethering_rounded : Icons.videocam_rounded,
-                color: Colors.lightBlue,
+                color: AppColors.primary,
                 size: 44,
               ),
             ),
             const SizedBox(height: 22),
             Text(
-              isPairing ? 'Povezivanje sa kamerom...' : 'Poveži kameru na hranilicu',
+              isPairing ? 'Povezivanje sa kamerom...' : 'Poveži kameru',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
               textAlign: TextAlign.center,
             ),
@@ -185,8 +186,8 @@ class _LiveView extends StatelessWidget {
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: Colors.lightBlue.shade50, shape: BoxShape.circle),
-                  child: const Icon(Icons.videocam_rounded, color: Colors.lightBlue),
+                  decoration: BoxDecoration(color: AppColors.tint50, shape: BoxShape.circle),
+                  child: const Icon(Icons.videocam_rounded, color: AppColors.primary),
                 ),
                 const SizedBox(width: 14),
                 Expanded(

@@ -7,6 +7,7 @@ import '../models/cat.dart';
 import '../services/notification_service.dart';
 import '../widgets/empty_state.dart';
 import 'schedule_form_screen.dart';
+import '../theme/app_colors.dart';
 
 class SchedulesAndLogsScreen extends StatefulWidget {
   final String baseUrl;
@@ -205,9 +206,9 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
           title: const Text('Aktivnosti'),
           bottom: TabBar(
             controller: _tabController,
-            labelColor: Colors.lightBlue,
+            labelColor: AppColors.primary,
             unselectedLabelColor: Colors.black45,
-            indicatorColor: Colors.lightBlue,
+            indicatorColor: AppColors.primary,
             tabs: const [
               Tab(text: 'Historija'),
               Tab(text: 'Rasporedi'),
@@ -217,7 +218,7 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
         floatingActionButton: _tabController.index == 1
             ? FloatingActionButton.extended(
                 onPressed: () => openScheduleForm(),
-                backgroundColor: Colors.lightBlue,
+                backgroundColor: AppColors.primary,
                 icon: const Icon(Icons.add),
                 label: const Text('Novi raspored'),
               )
@@ -292,7 +293,7 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
                                   onTap: () => openScheduleForm(existing: schedule as Map<String, dynamic>),
                                   leading: const CircleAvatar(
                                     backgroundColor: Color(0xFFFFF3E0),
-                                    child: Icon(Icons.alarm, color: Colors.lightBlue),
+                                    child: Icon(Icons.alarm, color: AppColors.primary),
                                   ),
                                   title: Text('${catName(schedule['catId'])} • ${formatTime(schedule['time'])}',
                                       style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -347,7 +348,7 @@ class _WeeklyFeedingChart extends StatelessWidget {
                   borderData: FlBorderData(show: false),
                   barTouchData: BarTouchData(
                     touchTooltipData: BarTouchTooltipData(
-                      getTooltipColor: (_) => Colors.lightBlue,
+                      getTooltipColor: (_) => AppColors.primary,
                       getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
                         '${rod.toY.toStringAsFixed(0)}g',
                         const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
@@ -381,7 +382,7 @@ class _WeeklyFeedingChart extends StatelessWidget {
                         barRods: [
                           BarChartRodData(
                             toY: entries[i].value,
-                            color: entries[i].value > 0 ? Colors.lightBlue : Colors.lightBlue.shade100,
+                            color: entries[i].value > 0 ? AppColors.primary : AppColors.tint100,
                             width: 20,
                             borderRadius: BorderRadius.circular(6),
                           ),

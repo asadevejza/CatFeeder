@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/cat_profile.dart';
+import '../theme/app_colors.dart';
 
 // Ekran za dodavanje nove mačke poslije onboarding-a (npr. sa "Me" ili "Care" taba).
 class AddCatScreen extends StatefulWidget {
@@ -82,7 +83,7 @@ class _AddCatScreenState extends State<AddCatScreen> {
                     children: [
                       const Text('Godine', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                       const SizedBox(height: 8),
-                      _field(_ageController, 'npr. 2', keyboardType: TextInputType.number),
+                      _field(_ageController, '2', keyboardType: TextInputType.number),
                     ],
                   ),
                 ),
@@ -93,7 +94,7 @@ class _AddCatScreenState extends State<AddCatScreen> {
                     children: [
                       const Text('Težina (kg)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                       const SizedBox(height: 8),
-                      _field(_weightController, 'npr. 4.5', keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+                      _field(_weightController, '4.5', keyboardType: const TextInputType.numberWithOptions(decimal: true)),
                     ],
                   ),
                 ),
@@ -102,7 +103,7 @@ class _AddCatScreenState extends State<AddCatScreen> {
             const SizedBox(height: 18),
             const Text('Rasa', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
             const SizedBox(height: 8),
-            _field(_breedController, 'npr. Domaća kratkodlaka'),
+            _field(_breedController, 'Domaća kratkodlaka'),
             const SizedBox(height: 28),
             ElevatedButton(
               onPressed: _isSaving ? null : _save,
@@ -140,18 +141,18 @@ class _AddCatScreenState extends State<AddCatScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: selected ? Colors.lightBlue.shade50 : Colors.white,
+          color: selected ? AppColors.tint50 : Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: selected ? Colors.lightBlue : Colors.grey.shade200, width: selected ? 1.6 : 1),
+          border: Border.all(color: selected ? AppColors.primary : Colors.grey.shade200, width: selected ? 1.6 : 1),
         ),
         child: Column(
           children: [
-            Icon(icon, color: selected ? Colors.lightBlue : Colors.black45),
+            Icon(icon, color: selected ? AppColors.primary : Colors.black45),
             const SizedBox(height: 4),
             Text(label,
                 style: TextStyle(
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected ? Colors.lightBlue.shade900 : Colors.black54,
+                  color: selected ? AppColors.primaryDark : Colors.black54,
                   fontSize: 13,
                 )),
           ],

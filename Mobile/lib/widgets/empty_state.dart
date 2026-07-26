@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 
 // Prazno stanje u Petlibro stilu — veliki krug sa ikonicom, podebljan naslov,
 // sivi opisni tekst, i opciono dugme za akciju (npr. "Dodaj prvu mačku").
@@ -36,8 +37,8 @@ class EmptyState extends StatelessWidget {
             child: Container(
               width: 72,
               height: 72,
-              decoration: BoxDecoration(color: Colors.lightBlue.shade50, shape: BoxShape.circle),
-              child: Icon(icon, color: Colors.lightBlue, size: 34),
+              decoration: BoxDecoration(color: AppColors.tint50, shape: BoxShape.circle),
+              child: Icon(icon, color: AppColors.primary, size: 34),
             ),
           ),
           const SizedBox(height: 20),
@@ -53,8 +54,8 @@ class EmptyState extends StatelessWidget {
             TextButton(
               onPressed: onAction,
               style: TextButton.styleFrom(
-                backgroundColor: Colors.lightBlue.shade50,
-                foregroundColor: Colors.lightBlue.shade900,
+                backgroundColor: AppColors.tint50,
+                foregroundColor: AppColors.primaryDark,
                 padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
               ),

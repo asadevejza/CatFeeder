@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/cat.dart';
 import 'schedules_and_logs_screen.dart';
+import '../theme/app_colors.dart';
 
 class ServicesScreen extends StatelessWidget {
   final String baseUrl;
@@ -17,7 +18,7 @@ class ServicesScreen extends StatelessWidget {
           children: [
             _ServiceCard(
               icon: Icons.event_note_rounded,
-              color: Colors.lightBlue,
+              color: AppColors.primary,
               title: 'Raspored hranjenja i evidencija',
               subtitle: 'Podesi automatsko hranjenje i pregledaj historiju',
               onTap: () => Navigator.push(

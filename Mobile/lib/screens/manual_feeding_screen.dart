@@ -7,6 +7,7 @@ import '../api_config.dart';
 import '../models/cat.dart';
 import '../services/cat_avatar_service.dart';
 import '../widgets/empty_state.dart';
+import '../theme/app_colors.dart';
 
 class ManualFeedingScreen extends StatefulWidget {
   final String baseUrl;
@@ -165,17 +166,17 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
               child: Text(cat.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt_outlined, color: Colors.lightBlue),
+              leading: const Icon(Icons.camera_alt_outlined, color: AppColors.primary),
               title: const Text('Slikaj'),
               onTap: () => Navigator.pop(context, 'camera'),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined, color: Colors.lightBlue),
+              leading: const Icon(Icons.photo_library_outlined, color: AppColors.primary),
               title: const Text('Izaberi iz galerije'),
               onTap: () => Navigator.pop(context, 'gallery'),
             ),
             ListTile(
-              leading: const Icon(Icons.edit_outlined, color: Colors.lightBlue),
+              leading: const Icon(Icons.edit_outlined, color: AppColors.primary),
               title: const Text('Preimenuj'),
               onTap: () => Navigator.pop(context, 'edit'),
             ),
@@ -309,11 +310,11 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
                           duration: const Duration(milliseconds: 250),
                           width: 84,
                           decoration: BoxDecoration(
-                            color: selected ? Colors.lightBlue : Colors.white,
+                            color: selected ? AppColors.primary : Colors.white,
                             borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: selected ? Colors.lightBlue : Colors.lightBlue.shade100, width: 2),
+                            border: Border.all(color: selected ? AppColors.primary : AppColors.tint100, width: 2),
                             boxShadow: selected
-                                ? [BoxShadow(color: Colors.lightBlue.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))]
+                                ? [BoxShadow(color: AppColors.primary.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))]
                                 : [],
                           ),
                           child: Column(
@@ -325,7 +326,7 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
                                   avatarPath != null
                                       ? CircleAvatar(
                                           radius: 16,
-                                          backgroundColor: selected ? Colors.white : Colors.lightBlue.shade50,
+                                          backgroundColor: selected ? Colors.white : AppColors.tint50,
                                           backgroundImage: FileImage(File(avatarPath)),
                                         )
                                       : const Text('🐈', style: TextStyle(fontSize: 26)),
@@ -336,7 +337,7 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
                                       child: Container(
                                         padding: const EdgeInsets.all(2),
                                         decoration: BoxDecoration(
-                                          color: selected ? Colors.lightBlue : Colors.white,
+                                          color: selected ? AppColors.primary : Colors.white,
                                           shape: BoxShape.circle,
                                           border: Border.all(color: selected ? Colors.white : Colors.white, width: 1.5),
                                         ),
@@ -389,9 +390,9 @@ class _ManualFeedingScreenState extends State<ManualFeedingScreen> {
                       duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
                       decoration: BoxDecoration(
-                        color: selected ? Colors.lightBlue : Colors.white,
+                        color: selected ? AppColors.primary : Colors.white,
                         borderRadius: BorderRadius.circular(100),
-                        border: Border.all(color: selected ? Colors.lightBlue : Colors.lightBlue.shade100, width: 2),
+                        border: Border.all(color: selected ? AppColors.primary : AppColors.tint100, width: 2),
                       ),
                       child: Text('$grams g',
                           style: TextStyle(
@@ -487,12 +488,12 @@ class _CatMoodWidgetState extends State<CatMoodWidget> with SingleTickerProvider
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
                     colors: _showHappy
-                        ? [Colors.lightBlue.shade300, Colors.lightBlue.shade100]
-                        : [Colors.lightBlue.shade100, Colors.lightBlue.shade50],
+                        ? [AppColors.primaryLight, AppColors.tint100]
+                        : [AppColors.tint100, AppColors.tint50],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  boxShadow: [BoxShadow(color: Colors.lightBlue.withOpacity(0.2), blurRadius: 24, spreadRadius: 2)],
+                  boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.2), blurRadius: 24, spreadRadius: 2)],
                 ),
                 child: Center(
                   child: AnimatedSwitcher(

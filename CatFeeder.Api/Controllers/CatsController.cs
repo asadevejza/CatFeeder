@@ -16,7 +16,10 @@ namespace CatFeeder.Api.Controllers
             _catServis = catServis;
         }
 
-        private static CatDto ToDto(Cat cat) => new(cat.Id, cat.Name, cat.RfidTag);
+        private static CatDto ToDto(Cat cat) => new(
+            cat.Id, cat.Name, cat.RfidTag, cat.Sex, cat.BirthDate, cat.Breed,
+            cat.IsNeutered, cat.WeightKg, cat.Personality, cat.Goals
+        );
 
         [HttpGet]
         public async Task<ActionResult<List<CatDto>>> GetCats()
@@ -39,7 +42,18 @@ namespace CatFeeder.Api.Controllers
             if (string.IsNullOrWhiteSpace(dto.Name))
                 return BadRequest(new { error = "Ime mačke je obavezno." });
 
-            var cat = new Cat { Name = dto.Name, RfidTag = dto.RfidTag };
+            var cat = new Cat
+            {
+                Name = dto.Name,
+                RfidTag = dto.RfidTag,
+                Sex = dto.Sex,
+                BirthDate = dto.BirthDate,
+                Breed = dto.Breed,
+                IsNeutered = dto.IsNeutered,
+                WeightKg = dto.WeightKg,
+                Personality = dto.Personality,
+                Goals = dto.Goals,
+            };
             await _catServis.AddAsync(cat);
 
             return CreatedAtAction(nameof(GetCat), new { id = cat.Id }, ToDto(cat));
@@ -56,6 +70,13 @@ namespace CatFeeder.Api.Controllers
 
             existing.Name = dto.Name;
             existing.RfidTag = dto.RfidTag;
+            existing.Sex = dto.Sex;
+            existing.BirthDate = dto.BirthDate;
+            existing.Breed = dto.Breed;
+            existing.IsNeutered = dto.IsNeutered;
+            existing.WeightKg = dto.WeightKg;
+            existing.Personality = dto.Personality;
+            existing.Goals = dto.Goals;
             await _catServis.UpdateAsync(existing);
 
             return NoContent();

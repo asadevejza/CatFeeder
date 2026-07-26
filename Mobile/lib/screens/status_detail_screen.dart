@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 
 // Detaljan status hranilice - otvara se klikom na uređaj na "Uređaji" tabu.
 class StatusDetailScreen extends StatelessWidget {
@@ -40,7 +41,7 @@ class StatusDetailScreen extends StatelessWidget {
                   _LevelCard(
                     title: 'Nivo vode u posudi',
                     level: waterLevel,
-                    color: Colors.lightBlue,
+                    color: AppColors.primary,
                     lowWarningText: 'Vrijeme je da dosuješ vodu',
                   ),
                   const SizedBox(height: 16),

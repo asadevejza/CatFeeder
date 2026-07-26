@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/cat_profile.dart';
+import '../theme/app_colors.dart';
 
 // Prikazuje se samo prilikom prvog pokretanja aplikacije. Prvo traži
 // korisnikove podatke, zatim podatke o njegovoj mački (ime, spol, godine,
@@ -75,7 +76,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7FAFC),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -164,7 +165,7 @@ class _StepDots extends StatelessWidget {
           height: 6,
           width: active ? 22 : 6,
           decoration: BoxDecoration(
-            color: active ? Colors.lightBlue : Colors.grey.shade300,
+            color: active ? AppColors.primary : Colors.grey.shade300,
             borderRadius: BorderRadius.circular(4),
           ),
         );
@@ -187,8 +188,8 @@ class _OwnerStep extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.lightBlue.shade50, shape: BoxShape.circle),
-            child: const Icon(Icons.pets_rounded, color: Colors.lightBlue, size: 34),
+            decoration: BoxDecoration(color: AppColors.tint50, shape: BoxShape.circle),
+            child: const Icon(Icons.pets_rounded, color: AppColors.primary, size: 34),
           ),
           const SizedBox(height: 20),
           const Text('Dobrodošli u CatFeeder', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
@@ -247,7 +248,7 @@ class _CatStep extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.lightBlue.shade50, shape: BoxShape.circle),
+            decoration: BoxDecoration(color: AppColors.tint50, shape: BoxShape.circle),
             child: const Text('🐈', style: TextStyle(fontSize: 34)),
           ),
           const SizedBox(height: 20),
@@ -372,18 +373,18 @@ class _GenderChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: selected ? Colors.lightBlue.shade50 : Colors.white,
+          color: selected ? AppColors.tint50 : Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: selected ? Colors.lightBlue : Colors.grey.shade200, width: selected ? 1.6 : 1),
+          border: Border.all(color: selected ? AppColors.primary : Colors.grey.shade200, width: selected ? 1.6 : 1),
         ),
         child: Column(
           children: [
-            Icon(icon, color: selected ? Colors.lightBlue : Colors.black45),
+            Icon(icon, color: selected ? AppColors.primary : Colors.black45),
             const SizedBox(height: 4),
             Text(label,
                 style: TextStyle(
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected ? Colors.lightBlue.shade900 : Colors.black54,
+                  color: selected ? AppColors.primaryDark : Colors.black54,
                   fontSize: 13,
                 )),
           ],

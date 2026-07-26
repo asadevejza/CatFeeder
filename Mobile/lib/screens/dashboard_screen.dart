@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/cat.dart';
+import '../theme/app_colors.dart';
 
 class DashboardScreen extends StatelessWidget {
   final double foodLevel;
@@ -72,11 +73,11 @@ class DashboardScreen extends StatelessWidget {
                                       padding: const EdgeInsets.all(2),
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
-                                        border: Border.all(color: selected ? Colors.lightBlue : Colors.transparent, width: 2),
+                                        border: Border.all(color: selected ? AppColors.primary : Colors.transparent, width: 2),
                                       ),
                                       child: CircleAvatar(
                                         radius: 22,
-                                        backgroundColor: Colors.lightBlue.shade50,
+                                        backgroundColor: AppColors.tint50,
                                         child: const Text('🐈', style: TextStyle(fontSize: 20)),
                                       ),
                                     ),
@@ -155,7 +156,7 @@ class DashboardScreen extends StatelessWidget {
                   _LevelCard(
                     title: 'Nivo vode u posudi',
                     level: waterLevel,
-                    color: Colors.lightBlue,
+                    color: AppColors.primary,
                     lowWarningText: 'Vrijeme je da dosuješ vodu',
                   ),
                   const SizedBox(height: 16),

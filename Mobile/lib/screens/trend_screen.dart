@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../api_config.dart';
 import '../services/profile_service.dart';
 import '../services/weight_history_service.dart';
+import '../theme/app_colors.dart';
 
 enum TrendType { weight, food, water }
 
@@ -191,7 +192,7 @@ class _TrendScreenState extends State<TrendScreen> {
       case TrendType.food:
         return Colors.orange;
       case TrendType.water:
-        return Colors.lightBlue;
+        return AppColors.primary;
     }
   }
 

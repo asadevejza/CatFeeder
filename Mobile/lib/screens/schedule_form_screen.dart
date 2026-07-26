@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../api_config.dart';
 import '../models/cat.dart';
+import '../theme/app_colors.dart';
 
 class ScheduleFormScreen extends StatefulWidget {
   final String baseUrl;
@@ -145,7 +146,7 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
               if (widget.cats.isEmpty)
                 Container(
                   padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(color: Colors.lightBlue.shade50, borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(color: AppColors.tint50, borderRadius: BorderRadius.circular(12)),
                   child: const Text('Nemaš nijednu mačku — dodaj je prvo na ekranu za hranjenje.'),
                 )
               else
@@ -157,12 +158,12 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
                     return ChoiceChip(
                       label: Text(cat.name),
                       selected: selected,
-                      selectedColor: Colors.lightBlue,
+                      selectedColor: AppColors.primary,
                       labelStyle: TextStyle(color: selected ? Colors.white : Colors.black87, fontWeight: FontWeight.w600),
                       backgroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(100),
-                        side: BorderSide(color: selected ? Colors.lightBlue : Colors.lightBlue.shade100),
+                        side: BorderSide(color: selected ? AppColors.primary : AppColors.tint100),
                       ),
                       onSelected: (_) => setState(() => selectedCatId = cat.id),
                     );
@@ -180,11 +181,11 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.lightBlue.shade100, width: 2),
+                    border: Border.all(color: AppColors.tint100, width: 2),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.access_time_rounded, color: Colors.lightBlue),
+                      const Icon(Icons.access_time_rounded, color: AppColors.primary),
                       const SizedBox(width: 12),
                       Text(selectedTime.format(context), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ],
@@ -205,9 +206,9 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
                       duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
                       decoration: BoxDecoration(
-                        color: selected ? Colors.lightBlue : Colors.white,
+                        color: selected ? AppColors.primary : Colors.white,
                         borderRadius: BorderRadius.circular(100),
-                        border: Border.all(color: selected ? Colors.lightBlue : Colors.lightBlue.shade100, width: 2),
+                        border: Border.all(color: selected ? AppColors.primary : AppColors.tint100, width: 2),
                       ),
                       child: Text('$grams g',
                           style: TextStyle(color: selected ? Colors.white : Colors.black87, fontWeight: FontWeight.w700)),
@@ -227,12 +228,12 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
                   return FilterChip(
                     label: Text(day['bs']!),
                     selected: selected,
-                    selectedColor: Colors.lightBlue,
+                    selectedColor: AppColors.primary,
                     labelStyle: TextStyle(color: selected ? Colors.white : Colors.black87, fontWeight: FontWeight.w600),
                     backgroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(100),
-                      side: BorderSide(color: selected ? Colors.lightBlue : Colors.lightBlue.shade100),
+                      side: BorderSide(color: selected ? AppColors.primary : AppColors.tint100),
                     ),
                     onSelected: (isSelected) => setState(() {
                       if (isSelected) {

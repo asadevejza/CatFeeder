@@ -5,9 +5,11 @@ import '../api_config.dart';
 import '../models/cat.dart';
 import '../services/settings_service.dart';
 import '../services/notification_service.dart';
+import '../theme/app_colors.dart';
+
 import 'device_screen.dart';
-import 'feeding_screen.dart';
-import 'schedules_and_logs_screen.dart';
+import 'care_screen.dart';
+import 'services_screen.dart';
 import 'settings_screen.dart';
 
 // ================= GLAVNA NAVIGACIJA + DIJELJENO STANJE =================
@@ -19,7 +21,6 @@ class MainNavigationScreen extends StatefulWidget {
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
-
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
 
@@ -27,7 +28,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   // --- Dijeljeno stanje, vidljivo svim ekranima ---
   double foodLevel = 100.0;
-  double? waterLevel; // null dok ESP32 ne počne slati očitavanja (hardver za vodu još nije spojen)
+  double? waterLevel; // null dok ESP32 ne počne slati očitavanja
   double temp = 0.0;
   double humidity = 0.0;
   bool isLoadingDashboard = true;
@@ -36,12 +37,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int? selectedCatId;
   bool isLoadingCats = true;
 
-  // Svaki uspješan feed povećava ovaj brojač — animirana mačka to koristi
-  // kao okidač da odigra animaciju, čak i ako je "raspoloženje" isto kao prije.
+  // Svaki uspješan feed povećava ovaj brojač — animirana mačka to koristi kao okidač
   int feedTrigger = 0;
 
-  // Prati da li je upozorenje o niskom nivou već prikazano, da se ne ponavlja
-  // na svaki fetch dok je nivo i dalje nizak — resetuje se kad nivo ponovo poraste.
+  // Prati da li je upozorenje o niskom nivou već prikazano
   bool _foodAlertActive = false;
   bool _waterAlertActive = false;
 
@@ -80,8 +79,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
-  // Prikazuje notifikaciju kad nivo padne ispod 20%, ali samo jednom dok god
-  // ostane nizak — čim se popuni iznad 25%, "otključava" se za sljedeći put.
   void _checkLowLevelAlerts() {
     if (foodLevel < 20 && !_foodAlertActive) {
       _foodAlertActive = true;
@@ -125,7 +122,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
-  // catId -> {'lastFed': DateTime?, 'todayGrams': int} — za "MY PET" traku na Dashboard-u
   Map<int, Map<String, dynamic>> feedingSummaryByCat = {};
 
   Future<void> fetchFeedingSummary() async {
@@ -165,43 +161,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       if (!mounted) return;
       setState(() => feedingSummaryByCat = summary);
     } catch (_) {
-      // Tiho ne uspije - Dashboard samo neće prikazati sažetak, ne ruši app.
-    }
-  }
-
-  Future<bool> addCat(String name) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/cats'),
-        headers: apiHeaders(withJsonBody: true),
-        body: json.encode({'name': name}),
-      );
-      if (!mounted) return false;
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        await fetchCats();
-        return true;
-      }
-      return false;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  Future<bool> editCat(int id, String newName) async {
-    try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/cats/$id'),
-        headers: apiHeaders(withJsonBody: true),
-        body: json.encode({'id': id, 'name': newName}),
-      );
-      if (!mounted) return false;
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        await fetchCats();
-        return true;
-      }
-      return false;
-    } catch (_) {
-      return false;
+      // Tiho ne uspije
     }
   }
 
@@ -222,9 +182,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
-  // Poziva se iz FeedingScreen nakon uspješnog POST-a ka /feedinglogs.
-  // Lokalno spušta nivo hrane (dok ESP32 ne bude sam slao stvarna očitavanja)
-  // i pokreće animaciju sretne mačke.
   void applyLocalFeedEffect(int grams) {
     setState(() {
       final drop = (grams / totalCapacityGrams) * 100;
@@ -238,7 +195,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     setState(() => selectedCatId = catId);
   }
 
-  // Poziva se sa Settings ekrana kad korisnik sačuva novu adresu servera.
   Future<void> updateBaseUrl(String newUrl) async {
     await SettingsService.saveBaseUrl(newUrl);
     if (!mounted) return;
@@ -253,7 +209,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screens = [
+    final List<Widget> screens = [
+      // 1. Device Tab
       DeviceScreen(
         foodLevel: foodLevel,
         waterLevel: waterLevel,
@@ -265,21 +222,35 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           await fetchFeedingSummary();
         },
       ),
-      FeedingScreen(
+
+      // 2. Care Tab
+   CareScreen(
         baseUrl: baseUrl,
         cats: cats,
-        isLoadingCats: isLoadingCats,
+        waterLevel: waterLevel,
         selectedCatId: selectedCatId,
-        feedTrigger: feedTrigger,
         onSelectCat: selectCat,
-        onAddCat: addCat,
-        onEditCat: editCat,
-        onDeleteCat: deleteCat,
-        onFedSuccess: applyLocalFeedEffect,
         feedingSummaryByCat: feedingSummaryByCat,
+        onAddCat: (catId, catProfile) async {
+          // Poziva se kad se dodaje mačka kroz CareScreen
+          await fetchCats();
+          return true;
+        },
       ),
-      SchedulesAndLogsScreen(baseUrl: baseUrl, cats: cats),
-      SettingsScreen(currentBaseUrl: baseUrl, onSave: updateBaseUrl),
+
+      // 3. Services Tab
+      ServicesScreen(
+        baseUrl: baseUrl,
+        cats: cats,
+      ),
+
+      // 4. Me Tab
+      SettingsScreen(
+        currentBaseUrl: baseUrl,
+        onSave: updateBaseUrl,
+        cats: cats,
+        onCatsChanged: fetchCats,
+      ),
     ];
 
     return Scaffold(
@@ -287,22 +258,40 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, -3))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, -3),
+            ),
+          ],
         ),
         child: ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           child: BottomNavigationBar(
             currentIndex: _selectedIndex,
             onTap: (index) => setState(() => _selectedIndex = index),
-            selectedItemColor: Colors.lightBlue,
+            selectedItemColor: AppColors.primary,
             unselectedItemColor: Colors.grey,
             backgroundColor: Colors.white,
             type: BottomNavigationBarType.fixed,
             items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.inventory_2_rounded), label: 'Uređaji'),
-              BottomNavigationBarItem(icon: Icon(Icons.pets_rounded), label: 'Hrani'),
-              BottomNavigationBarItem(icon: Icon(Icons.history_rounded), label: 'Aktivnosti'),
-              BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Ja'),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.devices_rounded),
+                label: 'Device',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.favorite_rounded),
+                label: 'Care',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.grid_view_rounded),
+                label: 'Services',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person_rounded),
+                label: 'Me',
+              ),
             ],
           ),
         ),

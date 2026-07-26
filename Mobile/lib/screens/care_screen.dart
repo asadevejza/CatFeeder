@@ -7,26 +7,12 @@ import '../services/cat_avatar_service.dart';
 import '../services/profile_service.dart';
 import 'add_cat_screen.dart';
 import 'trend_screen.dart';
+import '../theme/app_colors.dart';
 
 const List<String> _mjeseci = [
   'jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'avg', 'sep', 'okt', 'nov', 'dec',
 ];
 const List<String> _dayLetters = ['N', 'P', 'U', 'S', 'Č', 'P', 'S']; // 0=Sunday
-
-class _CareTask {
-  final String id;
-  final String title;
-  final IconData icon;
-  const _CareTask(this.id, this.title, this.icon);
-}
-
-const List<_CareTask> _defaultTasks = [
-  _CareTask('play', 'Vrijeme igre', Icons.sports_baseball_rounded),
-  _CareTask('feed', 'Nahrani suhom hranom', Icons.icecream_rounded),
-  _CareTask('litter', 'Provjeri WC posudu', Icons.cleaning_services_rounded),
-  _CareTask('groom', 'Očetkaj krzno', Icons.brush_rounded),
-  _CareTask('water', 'Provjeri svježu vodu', Icons.water_drop_rounded),
-];
 
 class CareScreen extends StatefulWidget {
   final List<Cat> cats;
@@ -101,9 +87,9 @@ class _CareScreenState extends State<CareScreen> with SingleTickerProviderStateM
       appBar: AppBar(
         title: TabBar(
           controller: _tabController,
-          labelColor: const Color(0xFF1A2B3C),
+          labelColor: AppColors.textDark,
           unselectedLabelColor: Colors.black38,
-          indicatorColor: Colors.lightBlue,
+          indicatorColor: AppColors.primary,
           labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
           tabs: const [Tab(text: 'Dashboard'), Tab(text: 'Care List')],
         ),
@@ -181,11 +167,11 @@ class _CatSelectorRow extends StatelessWidget {
                       padding: const EdgeInsets.all(2),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: selected ? Colors.lightBlue : Colors.transparent, width: 2),
+                        border: Border.all(color: selected ? AppColors.primary : Colors.transparent, width: 2),
                       ),
                       child: CircleAvatar(
                         radius: 26,
-                        backgroundColor: Colors.lightBlue.shade50,
+                        backgroundColor: AppColors.tint50,
                         backgroundImage: avatarPath != null ? FileImage(File(avatarPath)) : null,
                         child: avatarPath == null ? const Text('🐈', style: TextStyle(fontSize: 22)) : null,
                       ),
@@ -332,7 +318,7 @@ class _DashboardTab extends StatelessWidget {
               Expanded(
                 child: _StatColumn(label: 'Status', value: (waterLevel ?? 100) < 20 ? 'Nisko' : 'U redu'),
               ),
-              _MiniSparkline(color: Colors.lightBlue),
+              _MiniSparkline(color: AppColors.primary),
             ],
           ),
         ),
@@ -500,45 +486,116 @@ class _CareListTab extends StatefulWidget {
 
 class _CareListTabState extends State<_CareListTab> {
   DateTime _selectedDay = DateTime.now();
-  Set<String> _doneTaskIds = {};
+  List<CareItem> _items = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadDone();
+    _load();
   }
 
   @override
   void didUpdateWidget(covariant _CareListTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.cat?.id != widget.cat?.id) _loadDone();
+    if (oldWidget.cat?.id != widget.cat?.id) _load();
   }
 
-  Future<void> _loadDone() async {
+  Future<void> _load() async {
     if (widget.cat == null) {
       setState(() => _isLoading = false);
       return;
     }
     setState(() => _isLoading = true);
-    final done = await CareListService.doneTasksFor(widget.cat!.id, _selectedDay);
+    final items = await CareListService.itemsFor(widget.cat!.id, _selectedDay);
     if (!mounted) return;
     setState(() {
-      _doneTaskIds = done;
+      _items = items;
       _isLoading = false;
     });
   }
 
-  Future<void> _toggle(String taskId, bool value) async {
+  Future<void> _toggle(CareItem item, bool value) async {
     if (widget.cat == null) return;
-    setState(() {
-      if (value) {
-        _doneTaskIds.add(taskId);
-      } else {
-        _doneTaskIds.remove(taskId);
-      }
-    });
-    await CareListService.setDone(widget.cat!.id, _selectedDay, taskId, value);
+    setState(() => item.done = value);
+    final items = await CareListService.setDone(widget.cat!.id, _selectedDay, item.instanceId, value);
+    if (!mounted) return;
+    setState(() => _items = items);
+  }
+
+  Future<void> _editDetail(CareItem item) async {
+    if (widget.cat == null || item.detailType == CareDetailType.none) return;
+
+    String? newDetail;
+    if (item.detailType == CareDetailType.time) {
+      final picked = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+      if (picked == null) return;
+      newDetail = picked.format(context);
+    } else {
+      final controller = TextEditingController(text: item.detail ?? '');
+      newDetail = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(item.title),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'npr. 1/2 šolje'),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Otkaži')),
+            TextButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Sačuvaj')),
+          ],
+        ),
+      );
+      if (newDetail == null || newDetail.isEmpty) return;
+    }
+
+    setState(() => item.detail = newDetail);
+    final items = await CareListService.setDetail(widget.cat!.id, _selectedDay, item.instanceId, newDetail);
+    if (!mounted) return;
+    setState(() => _items = items);
+  }
+
+  Future<void> _removeItem(CareItem item) async {
+    if (widget.cat == null) return;
+    final items = await CareListService.removeItem(widget.cat!.id, _selectedDay, item.instanceId);
+    if (!mounted) return;
+    setState(() => _items = items);
+  }
+
+  Future<void> _addTask() async {
+    if (widget.cat == null) return;
+    final template = await showModalBottomSheet<CareTaskTemplate>(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 18, 20, 6),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Dodaj zadatak', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+              ),
+            ),
+            ...careTaskTemplates.map((t) => ListTile(
+                  leading: Icon(t.icon, color: AppColors.primary),
+                  title: Text(t.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  onTap: () => Navigator.pop(context, t),
+                )),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (template == null) return;
+
+    final items = await CareListService.addItem(widget.cat!.id, _selectedDay, template);
+    if (!mounted) return;
+    setState(() => _items = items);
   }
 
   List<DateTime> get _weekDays {
@@ -555,94 +612,167 @@ class _CareListTabState extends State<_CareListTab> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final progress = _doneTaskIds.length / _defaultTasks.length;
+    final doneCount = _items.where((e) => e.done).length;
+    final progress = _items.isEmpty ? 0.0 : doneCount / _items.length;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(18, 6, 18, 24),
+    return Stack(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        ListView(
+          padding: const EdgeInsets.fromLTRB(18, 6, 18, 90),
           children: [
-            Text('${_mjeseci[_selectedDay.month - 1]} ${_selectedDay.year}.',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Dnevni napredak ', style: TextStyle(fontSize: 12, color: Colors.black54)),
-                Text('${(progress * 100).round()}%',
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.lightBlue)),
+                Text('${_mjeseci[_selectedDay.month - 1]} ${_selectedDay.year}.',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                Row(
+                  children: [
+                    const Text('Dnevni napredak ', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                    Text('${(progress * 100).round()}%',
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                  ],
+                ),
               ],
             ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        Row(
-          children: _weekDays.map((day) {
-            final isSelected = day.year == _selectedDay.year && day.month == _selectedDay.month && day.day == _selectedDay.day;
-            final isToday = _isSameDay(day, DateTime.now());
-            return Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  setState(() => _selectedDay = day);
-                  _loadDone();
-                },
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.lightBlue : Colors.transparent,
-                    borderRadius: BorderRadius.circular(14),
-                    border: isToday && !isSelected ? Border.all(color: Colors.lightBlue) : null,
+            const SizedBox(height: 14),
+            Row(
+              children: _weekDays.map((day) {
+                final isSelected = day.year == _selectedDay.year && day.month == _selectedDay.month && day.day == _selectedDay.day;
+                final isToday = _isSameDay(day, DateTime.now());
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() => _selectedDay = day);
+                      _load();
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.primary : Colors.transparent,
+                        borderRadius: BorderRadius.circular(14),
+                        border: isToday && !isSelected ? Border.all(color: AppColors.primary) : null,
+                      ),
+                      child: Column(
+                        children: [
+                          Text(_dayLetters[day.weekday % 7],
+                              style: TextStyle(fontSize: 11, color: isSelected ? Colors.white70 : Colors.black45)),
+                          const SizedBox(height: 4),
+                          Text('${day.day}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: isSelected ? Colors.white : Colors.black87,
+                              )),
+                        ],
+                      ),
+                    ),
                   ),
-                  child: Column(
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 22),
+            const Text('To-do', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 12),
+            ..._items.map((item) {
+              return Dismissible(
+                key: ValueKey(item.instanceId),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.15), borderRadius: BorderRadius.circular(16)),
+                  child: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                ),
+                onDismissed: (_) => _removeItem(item),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.card,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.cardBorder),
+                  ),
+                  child: Row(
                     children: [
-                      Text(_dayLetters[day.weekday % 7],
-                          style: TextStyle(fontSize: 11, color: isSelected ? Colors.white70 : Colors.black45)),
-                      const SizedBox(height: 4),
-                      Text('${day.day}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: isSelected ? Colors.white : Colors.black87,
-                          )),
+                      _CircleCheck(done: item.done, onChanged: (v) => _toggle(item, v)),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _editDetail(item),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(item.title,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                    decoration: item.done ? TextDecoration.lineThrough : null,
+                                    color: item.done ? Colors.black38 : AppColors.textDark,
+                                  )),
+                              if (item.detailType != CareDetailType.none) ...[
+                                const SizedBox(height: 3),
+                                Text(
+                                  (item.detail?.isNotEmpty ?? false) ? item.detail! : item.detailHint,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: (item.detail?.isNotEmpty ?? false) ? AppColors.primary : Colors.black38,
+                                    fontWeight: (item.detail?.isNotEmpty ?? false) ? FontWeight.w700 : FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ),
-            );
-          }).toList(),
+              );
+            }),
+          ],
         ),
-        const SizedBox(height: 22),
-        const Text('Zadaci', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 12),
-        ..._defaultTasks.map((task) {
-          final done = _doneTaskIds.contains(task.id);
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade100),
-            ),
-            child: CheckboxListTile(
-              value: done,
-              onChanged: (v) => _toggle(task.id, v ?? false),
-              controlAffinity: ListTileControlAffinity.leading,
-              contentPadding: EdgeInsets.zero,
-              activeColor: Colors.lightBlue,
-              secondary: Icon(task.icon, color: Colors.lightBlue),
-              title: Text(task.title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    decoration: done ? TextDecoration.lineThrough : null,
-                    color: done ? Colors.black38 : Colors.black87,
-                  )),
-            ),
-          );
-        }),
+        Positioned(
+          right: 4,
+          bottom: 20,
+          child: FloatingActionButton(
+            heroTag: 'care_add_task',
+            onPressed: _addTask,
+            backgroundColor: AppColors.primary,
+            child: const Icon(Icons.add_rounded, color: Colors.white),
+          ),
+        ),
       ],
     );
   }
 
   bool _isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
+}
+
+// Kružni checkbox (prazan krug sa zlatnim rubom -> ispunjen zelenom bojom
+// sa kvačicom kad je zadatak završen), po uzoru na referentni dizajn.
+class _CircleCheck extends StatelessWidget {
+  final bool done;
+  final void Function(bool value) onChanged;
+  const _CircleCheck({required this.done, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => onChanged(!done),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 26,
+        height: 26,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: done ? AppColors.primary : Colors.transparent,
+          border: Border.all(color: done ? AppColors.primary : AppColors.gold, width: 1.6),
+        ),
+        child: done ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+      ),
+    );
+  }
 }

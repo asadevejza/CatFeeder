@@ -7,7 +7,9 @@ import '../api_config.dart';
 import '../models/cat.dart';
 import '../services/cat_avatar_service.dart';
 import '../widgets/empty_state.dart';
+import 'cat_profile_screen.dart';
 import 'schedule_form_screen.dart';
+import '../theme/app_colors.dart';
 
 // "Hrani" tab - kombinuje Dashboard (izbor mačke + ručno hranjenje) i
 // Care List (sedmični checklist rasporeda, filtriran po IZABRANOJ mački).
@@ -18,11 +20,10 @@ class FeedingScreen extends StatefulWidget {
   final int? selectedCatId;
   final int feedTrigger;
   final void Function(int catId) onSelectCat;
-  final Future<bool> Function(String name) onAddCat;
-  final Future<bool> Function(int id, String newName) onEditCat;
   final Future<bool> Function(int id) onDeleteCat;
   final void Function(int grams) onFedSuccess;
   final Map<int, Map<String, dynamic>> feedingSummaryByCat;
+  final VoidCallback onCatsChanged;
 
   const FeedingScreen({
     super.key,
@@ -32,11 +33,10 @@ class FeedingScreen extends StatefulWidget {
     required this.selectedCatId,
     required this.feedTrigger,
     required this.onSelectCat,
-    required this.onAddCat,
-    required this.onEditCat,
     required this.onDeleteCat,
     required this.onFedSuccess,
     required this.feedingSummaryByCat,
+    required this.onCatsChanged,
   });
 
   @override
@@ -148,35 +148,22 @@ class _FeedingScreenState extends State<FeedingScreen> with SingleTickerProvider
 
   // ============ MAČKE (dodaj/uredi/obriši) ============
 
-  Future<void> showAddCatDialog() async {
-    final controller = TextEditingController();
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Nova mačka'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Ime mačke, npr. Bella'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Otkaži')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Dodaj'),
-          ),
-        ],
+  void openAddCatProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CatProfileScreen(baseUrl: widget.baseUrl, onSaved: widget.onCatsChanged),
       ),
     );
+  }
 
-    if (result != null && result.isNotEmpty) {
-      final success = await widget.onAddCat(result);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(success ? '$result je dodana! 🐱' : 'Nije uspjelo dodavanje mačke')),
-      );
-    }
+  void openEditCatProfile(Cat cat) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CatProfileScreen(baseUrl: widget.baseUrl, existingCat: cat, onSaved: widget.onCatsChanged),
+      ),
+    );
   }
 
   Future<void> showManageCatDialog(Cat cat) async {
@@ -192,19 +179,19 @@ class _FeedingScreenState extends State<FeedingScreen> with SingleTickerProvider
               child: Text(cat.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt_outlined, color: Colors.lightBlue),
+              leading: const Icon(Icons.camera_alt_outlined, color: AppColors.primary),
               title: const Text('Slikaj'),
               onTap: () => Navigator.pop(context, 'camera'),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined, color: Colors.lightBlue),
+              leading: const Icon(Icons.photo_library_outlined, color: AppColors.primary),
               title: const Text('Izaberi iz galerije'),
               onTap: () => Navigator.pop(context, 'gallery'),
             ),
             ListTile(
-              leading: const Icon(Icons.edit_outlined, color: Colors.lightBlue),
-              title: const Text('Preimenuj'),
-              onTap: () => Navigator.pop(context, 'edit'),
+              leading: const Icon(Icons.badge_outlined, color: AppColors.primary),
+              title: const Text('Uredi profil'),
+              onTap: () => Navigator.pop(context, 'profile'),
             ),
             ListTile(
               leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
@@ -228,30 +215,8 @@ class _FeedingScreenState extends State<FeedingScreen> with SingleTickerProvider
 
     if (!mounted || action == null) return;
 
-    if (action == 'edit') {
-      final controller = TextEditingController(text: cat.name);
-      final newName = await showDialog<String>(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Preimenuj mačku'),
-          content: TextField(controller: controller, autofocus: true),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Otkaži')),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, controller.text.trim()),
-              child: const Text('Sačuvaj'),
-            ),
-          ],
-        ),
-      );
-      if (newName != null && newName.isNotEmpty && mounted) {
-        final success = await widget.onEditCat(cat.id, newName);
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(success ? 'Ime promijenjeno! ✏️' : 'Nije uspjelo preimenovanje')),
-        );
-      }
+    if (action == 'profile') {
+      openEditCatProfile(cat);
     } else if (action == 'delete') {
       final confirm = await showDialog<bool>(
         context: context,
@@ -369,9 +334,9 @@ class _FeedingScreenState extends State<FeedingScreen> with SingleTickerProvider
         bottom: hasCats
             ? TabBar(
                 controller: _tabController,
-                labelColor: Colors.lightBlue,
+                labelColor: AppColors.primary,
                 unselectedLabelColor: Colors.black45,
-                indicatorColor: Colors.lightBlue,
+                indicatorColor: AppColors.primary,
                 tabs: const [
                   Tab(text: 'Dashboard'),
                   Tab(text: 'Care List'),
@@ -390,7 +355,7 @@ class _FeedingScreenState extends State<FeedingScreen> with SingleTickerProvider
                       title: 'Nemaš nijednu mačku',
                       subtitle: 'Dodaj svoju prvu mačku da počneš sa hranjenjem.',
                       actionLabel: 'Dodaj mačku',
-                      onAction: showAddCatDialog,
+                      onAction: openAddCatProfile,
                     ),
                   ),
                 )
@@ -423,11 +388,11 @@ class _FeedingScreenState extends State<FeedingScreen> with SingleTickerProvider
               duration: const Duration(milliseconds: 250),
               width: 84,
               decoration: BoxDecoration(
-                color: selected ? Colors.lightBlue : Colors.white,
+                color: selected ? AppColors.primary : Colors.white,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: selected ? Colors.lightBlue : Colors.lightBlue.shade100, width: 2),
+                border: Border.all(color: selected ? AppColors.primary : AppColors.tint100, width: 2),
                 boxShadow: selected
-                    ? [BoxShadow(color: Colors.lightBlue.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))]
+                    ? [BoxShadow(color: AppColors.primary.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))]
                     : [],
               ),
               child: Column(
@@ -439,7 +404,7 @@ class _FeedingScreenState extends State<FeedingScreen> with SingleTickerProvider
                       avatarPath != null
                           ? CircleAvatar(
                               radius: 16,
-                              backgroundColor: selected ? Colors.white : Colors.lightBlue.shade50,
+                              backgroundColor: selected ? Colors.white : AppColors.tint50,
                               backgroundImage: FileImage(File(avatarPath)),
                             )
                           : const Text('🐈', style: TextStyle(fontSize: 26)),
@@ -450,7 +415,7 @@ class _FeedingScreenState extends State<FeedingScreen> with SingleTickerProvider
                           child: Container(
                             padding: const EdgeInsets.all(2),
                             decoration: BoxDecoration(
-                              color: selected ? Colors.lightBlue : Colors.white,
+                              color: selected ? AppColors.primary : Colors.white,
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white, width: 1.5),
                             ),
@@ -541,7 +506,7 @@ class _FeedingScreenState extends State<FeedingScreen> with SingleTickerProvider
                 const Text('Izaberi mačku', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                 const Spacer(),
                 TextButton.icon(
-                  onPressed: showAddCatDialog,
+                  onPressed: openAddCatProfile,
                   icon: const Icon(Icons.add_circle_outline, size: 18),
                   label: const Text('Dodaj'),
                 ),
@@ -567,9 +532,9 @@ class _FeedingScreenState extends State<FeedingScreen> with SingleTickerProvider
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
                     decoration: BoxDecoration(
-                      color: selected ? Colors.lightBlue : Colors.white,
+                      color: selected ? AppColors.primary : Colors.white,
                       borderRadius: BorderRadius.circular(100),
-                      border: Border.all(color: selected ? Colors.lightBlue : Colors.lightBlue.shade100, width: 2),
+                      border: Border.all(color: selected ? AppColors.primary : AppColors.tint100, width: 2),
                     ),
                     child: Text('$grams g',
                         style: TextStyle(
@@ -615,7 +580,7 @@ class _FeedingScreenState extends State<FeedingScreen> with SingleTickerProvider
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: Text('Raspored za: $selectedCatName',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.lightBlue)),
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.primary)),
             ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -635,7 +600,7 @@ class _FeedingScreenState extends State<FeedingScreen> with SingleTickerProvider
                       height: 36,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: selected ? Colors.lightBlue : (isToday ? Colors.lightBlue.shade50 : Colors.transparent),
+                        color: selected ? AppColors.primary : (isToday ? AppColors.tint50 : Colors.transparent),
                       ),
                       alignment: Alignment.center,
                       child: Text(
@@ -659,7 +624,7 @@ class _FeedingScreenState extends State<FeedingScreen> with SingleTickerProvider
               const Text('Zadaci za taj dan', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
               if (items.isNotEmpty)
                 Text('Napredak $progress%',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.lightBlue)),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary)),
             ],
           ),
           const SizedBox(height: 14),
@@ -682,13 +647,13 @@ class _FeedingScreenState extends State<FeedingScreen> with SingleTickerProvider
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: done ? Colors.lightBlue.shade100 : Colors.grey.shade100),
+                  border: Border.all(color: done ? AppColors.tint100 : Colors.grey.shade100),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       done ? Icons.check_circle : Icons.circle_outlined,
-                      color: done ? Colors.lightBlue : Colors.grey.shade300,
+                      color: done ? AppColors.primary : Colors.grey.shade300,
                       size: 26,
                     ),
                     const SizedBox(width: 14),
@@ -786,12 +751,12 @@ class _CatMoodWidgetState extends State<CatMoodWidget> with SingleTickerProvider
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
                     colors: _showHappy
-                        ? [Colors.lightBlue.shade300, Colors.lightBlue.shade100]
-                        : [Colors.lightBlue.shade100, Colors.lightBlue.shade50],
+                        ? [AppColors.primaryLight, AppColors.tint100]
+                        : [AppColors.tint100, AppColors.tint50],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  boxShadow: [BoxShadow(color: Colors.lightBlue.withOpacity(0.2), blurRadius: 24, spreadRadius: 2)],
+                  boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.2), blurRadius: 24, spreadRadius: 2)],
                 ),
                 child: Center(
                   child: AnimatedSwitcher(
