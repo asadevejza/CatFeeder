@@ -6,16 +6,31 @@ import '../theme/app_colors.dart';
 class ServicesScreen extends StatelessWidget {
   final String baseUrl;
   final List<Cat> cats;
+
   const ServicesScreen({super.key, required this.baseUrl, required this.cats});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Servisi')),
+      // Uklonjen appBar skroz kako ne bi gurao sadržaj dole
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(18),
+          // Postavljene identične margine pri vrhu kao na glavnom ekranu
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           children: [
+            // Naslov poravnat skroz gore-lijevo
+            const Padding(
+              padding: EdgeInsets.only(top: 4, bottom: 20),
+              child: Text(
+                'Servisi',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
             _ServiceCard(
               icon: Icons.event_note_rounded,
               color: AppColors.primary,
@@ -23,7 +38,12 @@ class ServicesScreen extends StatelessWidget {
               subtitle: 'Podesi automatsko hranjenje i pregledaj historiju',
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => SchedulesAndLogsScreen(baseUrl: baseUrl, cats: cats)),
+                MaterialPageRoute(
+                  builder: (context) => SchedulesAndLogsScreen(
+                    baseUrl: baseUrl,
+                    cats: cats,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 14),
@@ -31,7 +51,7 @@ class ServicesScreen extends StatelessWidget {
               icon: Icons.storefront_rounded,
               color: Colors.deepOrange,
               title: 'Prodavnica',
-              subtitle: 'Hrana, dodaci i oprema — uskoro',
+              subtitle: 'Hrana, dodaci i oprema',
               onTap: () => ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Uskoro dostupno.')),
               ),
@@ -50,7 +70,13 @@ class _ServiceCard extends StatelessWidget {
   final String subtitle;
   final VoidCallback onTap;
 
-  const _ServiceCard({required this.icon, required this.color, required this.title, required this.subtitle, required this.onTap});
+  const _ServiceCard({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +94,10 @@ class _ServiceCard extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(14),
+              ),
               child: Icon(icon, color: color, size: 26),
             ),
             const SizedBox(width: 14),
@@ -76,9 +105,21 @@ class _ServiceCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                    ),
+                  ),
                   const SizedBox(height: 3),
-                  Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.black45)),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black45,
+                    ),
+                  ),
                 ],
               ),
             ),

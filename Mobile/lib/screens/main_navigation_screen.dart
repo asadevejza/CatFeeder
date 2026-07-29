@@ -5,6 +5,8 @@ import '../api_config.dart';
 import '../models/cat.dart';
 import '../services/settings_service.dart';
 import '../services/notification_service.dart';
+import '../services/profile_service.dart';
+import '../models/cat_profile.dart';
 import '../theme/app_colors.dart';
 
 import 'device_screen.dart';
@@ -207,6 +209,31 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     fetchCats();
   }
 
+  // Dodavanje mačke - koristi ga i CareScreen i SettingsScreen (Ja tab),
+  // da postoji samo JEDNO mjesto koje zna kako se mačka stvarno pravi.
+  Future<bool> addCat(String name, CatProfile catProfile) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/cats'),
+        headers: apiHeaders(withJsonBody: true),
+        body: json.encode({'name': name}),
+      );
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        return false;
+      }
+      final created = json.decode(response.body) as Map<String, dynamic>;
+      final newCatId = created['id'] as int;
+
+      // Sačuvaj prošireni profil (spol, rasa, godine, težina) lokalno, vezano za taj pravi ID.
+      await ProfileService.saveCatProfile(newCatId, catProfile);
+
+      await fetchCats();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<Widget> screens = [
@@ -231,11 +258,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         selectedCatId: selectedCatId,
         onSelectCat: selectCat,
         feedingSummaryByCat: feedingSummaryByCat,
-        onAddCat: (catId, catProfile) async {
-          // Poziva se kad se dodaje mačka kroz CareScreen
-          await fetchCats();
-          return true;
-        },
+        onAddCat: addCat,
       ),
 
       // 3. Services Tab
@@ -246,10 +269,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
       // 4. Me Tab
       SettingsScreen(
+        baseUrl: baseUrl,
         currentBaseUrl: baseUrl,
         onSave: updateBaseUrl,
         cats: cats,
         onCatsChanged: fetchCats,
+        onAddCat: addCat,
       ),
     ];
 

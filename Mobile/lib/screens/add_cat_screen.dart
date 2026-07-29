@@ -1,23 +1,40 @@
 import 'package:flutter/material.dart';
+import '../models/cat.dart';
 import '../models/cat_profile.dart';
 import '../theme/app_colors.dart';
 
-// Ekran za dodavanje nove mačke poslije onboarding-a (npr. sa "Me" ili "Care" taba).
+// Ekran za dodavanje NOVE mačke (existingCat == null) ili uređivanje POSTOJEĆE
+// (existingCat != null) - isti ekran, ista mjesta gdje se podaci čuvaju.
 class AddCatScreen extends StatefulWidget {
   final Future<bool> Function(String name, CatProfile profile) onSave;
-  const AddCatScreen({super.key, required this.onSave});
+  final Cat? existingCat;
+  final CatProfile? existingProfile;
+  final Future<bool> Function(int catId, String name, CatProfile profile)? onUpdate;
+  final Future<bool> Function()? onDelete;
+
+  const AddCatScreen({
+    super.key,
+    required this.onSave,
+    this.existingCat,
+    this.existingProfile,
+    this.onUpdate,
+    this.onDelete,
+  });
 
   @override
   State<AddCatScreen> createState() => _AddCatScreenState();
 }
 
 class _AddCatScreenState extends State<AddCatScreen> {
-  final _nameController = TextEditingController();
-  final _breedController = TextEditingController();
-  final _ageController = TextEditingController();
-  final _weightController = TextEditingController();
-  String _gender = 'Mužjak';
+  late final _nameController = TextEditingController(text: widget.existingCat?.name ?? '');
+  late final _breedController = TextEditingController(text: widget.existingProfile?.breed ?? '');
+  late final _ageController = TextEditingController(text: widget.existingProfile?.ageYears.toString() ?? '');
+  late final _weightController = TextEditingController(text: widget.existingProfile?.weightKg.toString() ?? '');
+  late String _gender = widget.existingProfile?.gender ?? 'Mužjak';
   bool _isSaving = false;
+  bool _isDeleting = false;
+
+  bool get isEditMode => widget.existingCat != null;
 
   bool get _isValid =>
       _nameController.text.trim().isNotEmpty &&
@@ -33,13 +50,46 @@ class _AddCatScreenState extends State<AddCatScreen> {
       ageYears: int.parse(_ageController.text.trim()),
       weightKg: double.parse(_weightController.text.trim().replaceAll(',', '.')),
     );
-    final ok = await widget.onSave(_nameController.text.trim(), profile);
+
+    final bool ok;
+    if (isEditMode) {
+      ok = await widget.onUpdate!(widget.existingCat!.id, _nameController.text.trim(), profile);
+    } else {
+      ok = await widget.onSave(_nameController.text.trim(), profile);
+    }
+
     if (!mounted) return;
     setState(() => _isSaving = false);
     if (ok) {
       Navigator.pop(context);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nije uspjelo dodavanje mačke.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEditMode ? 'Nije uspjelo čuvanje izmjena.' : 'Nije uspjelo dodavanje mačke.')));
+    }
+  }
+
+  Future<void> _delete() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Obrisati ${widget.existingCat!.name}?'),
+        content: const Text('Ovo će trajno obrisati i cijelu njenu historiju hranjenja i sve rasporede. Ne može se poništiti.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Otkaži')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Obriši', style: TextStyle(color: Colors.redAccent))),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    setState(() => _isDeleting = true);
+    final ok = await widget.onDelete!();
+    if (!mounted) return;
+    setState(() => _isDeleting = false);
+    if (ok) {
+      Navigator.pop(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Brisanje nije uspjelo.')));
     }
   }
 
@@ -55,7 +105,7 @@ class _AddCatScreenState extends State<AddCatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Dodaj mačku')),
+      appBar: AppBar(title: Text(isEditMode ? 'Uredi profil' : 'Dodaj mačku')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),
@@ -109,8 +159,17 @@ class _AddCatScreenState extends State<AddCatScreen> {
               onPressed: _isSaving ? null : _save,
               child: _isSaving
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
-                  : const Text('Sačuvaj'),
+                  : Text(isEditMode ? 'Sačuvaj izmjene' : 'Sačuvaj'),
             ),
+            if (isEditMode && widget.onDelete != null) ...[
+              const SizedBox(height: 14),
+              TextButton(
+                onPressed: _isDeleting ? null : _delete,
+                child: _isDeleting
+                    ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Obriši mačku', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)),
+              ),
+            ],
           ],
         ),
       ),

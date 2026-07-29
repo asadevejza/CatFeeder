@@ -323,27 +323,6 @@ class _DashboardTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 18),
-        InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Uskoro dostupno.')),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [Colors.grey.shade900, Colors.grey.shade800]),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              children: [
-                Text('Otključaj uvide za ${cat!.name}',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
-                const SizedBox(height: 4),
-                const Text('Besplatno 7 dana', style: TextStyle(color: Colors.white70, fontSize: 12)),
-              ],
-            ),
-          ),
-        ),
         if (profile != null) ...[
           const SizedBox(height: 18),
           Text('O mački', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.grey.shade800)),

@@ -1,24 +1,33 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import '../api_config.dart';
 import '../models/cat.dart';
+import '../models/cat_profile.dart';
 import '../services/cat_avatar_service.dart';
+import '../services/profile_service.dart';
 import 'server_address_screen.dart';
-import 'cat_profile_screen.dart';
+import 'add_cat_screen.dart';
 import '../theme/app_colors.dart';
 
 // ================= EKRAN 4: "JA" (PROFIL / ME TAB) =================
 class SettingsScreen extends StatefulWidget {
+  final String baseUrl;
   final String currentBaseUrl;
   final Future<void> Function(String newUrl) onSave;
   final List<Cat> cats;
   final VoidCallback onCatsChanged;
+  final Future<bool> Function(String name, CatProfile profile) onAddCat;
 
   const SettingsScreen({
     super.key,
+    required this.baseUrl,
     required this.currentBaseUrl,
     required this.onSave,
     required this.cats,
     required this.onCatsChanged,
+    required this.onAddCat,
   });
 
   @override
@@ -27,17 +36,22 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   Map<int, String> avatarPaths = {};
+  Map<int, CatProfile> profiles = {};
 
   @override
   void initState() {
     super.initState();
     _loadAvatars();
+    _loadProfiles();
   }
 
   @override
   void didUpdateWidget(covariant SettingsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.cats.length != widget.cats.length) _loadAvatars();
+    if (oldWidget.cats.length != widget.cats.length) {
+      _loadAvatars();
+      _loadProfiles();
+    }
   }
 
   Future<void> _loadAvatars() async {
@@ -50,18 +64,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => avatarPaths = loaded);
   }
 
-  void _openProfile({Cat? cat}) async {
+  Future<void> _loadProfiles() async {
+    final loaded = await ProfileService.getAllCatProfiles();
+    if (!mounted) return;
+    setState(() => profiles = loaded);
+  }
+
+  // Uređivanje: ažurira ime na backendu (ako je promijenjeno) i profil lokalno.
+  Future<bool> _updateCat(int catId, String name, CatProfile profile) async {
+    try {
+      final response = await http.put(
+        Uri.parse('${widget.baseUrl}/cats/$catId'),
+        headers: apiHeaders(withJsonBody: true),
+        body: json.encode({'name': name}),
+      );
+      if (response.statusCode != 200 && response.statusCode != 204) return false;
+
+      await ProfileService.saveCatProfile(catId, profile);
+       widget.onCatsChanged();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> _deleteCat(int catId) async {
+    try {
+      await CatAvatarService.removeAvatar(catId);
+      await ProfileService.deleteCatProfile(catId);
+      final response = await http.delete(Uri.parse('${widget.baseUrl}/cats/$catId'), headers: apiHeaders());
+      if (response.statusCode != 200 && response.statusCode != 204) return false;
+       widget.onCatsChanged();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _openAddCat() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => AddCatScreen(onSave: widget.onAddCat)),
+    );
+    _loadAvatars();
+    _loadProfiles();
+  }
+
+  void _openEditCat(Cat cat) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CatProfileScreen(
-          baseUrl: widget.currentBaseUrl,
+        builder: (context) => AddCatScreen(
+          onSave: widget.onAddCat,
           existingCat: cat,
-          onSaved: widget.onCatsChanged,
+          existingProfile: profiles[cat.id],
+          onUpdate: _updateCat,
+          onDelete: () => _deleteCat(cat.id),
         ),
       ),
     );
     _loadAvatars();
+    _loadProfiles();
   }
 
   @override
@@ -98,7 +161,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 const Text('Moje mačke', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                 TextButton.icon(
-                  onPressed: () => _openProfile(),
+                  onPressed: _openAddCat,
                   icon: const Icon(Icons.add_circle_outline, size: 18),
                   label: const Text('Dodaj'),
                 ),
@@ -115,9 +178,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             else
               ...widget.cats.map((cat) {
                 final avatarPath = avatarPaths[cat.id];
-                final age = cat.ageDescription;
+                final profile = profiles[cat.id];
+                final subtitleParts = <String>[
+                  if (profile != null) '${profile.ageYears} god.',
+                  if (profile != null) profile.breed,
+                ];
                 return InkWell(
-                  onTap: () => _openProfile(cat: cat),
+                  onTap: () => _openEditCat(cat),
                   borderRadius: BorderRadius.circular(18),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 10),
@@ -141,12 +208,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(cat.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                              if (age != null || cat.breed != null) ...[
+                              if (subtitleParts.isNotEmpty) ...[
                                 const SizedBox(height: 2),
-                                Text(
-                                  [if (age != null) age, if (cat.breed != null) cat.breed!].join(' • '),
-                                  style: const TextStyle(fontSize: 12, color: Colors.black45),
-                                ),
+                                Text(subtitleParts.join(' • '), style: const TextStyle(fontSize: 12, color: Colors.black45)),
                               ],
                             ],
                           ),

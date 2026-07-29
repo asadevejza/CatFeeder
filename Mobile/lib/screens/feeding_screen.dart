@@ -7,9 +7,10 @@ import '../api_config.dart';
 import '../models/cat.dart';
 import '../services/cat_avatar_service.dart';
 import '../widgets/empty_state.dart';
-import 'cat_profile_screen.dart';
 import 'schedule_form_screen.dart';
 import '../theme/app_colors.dart';
+import 'add_cat_screen.dart';
+import '../models/cat_profile.dart';
 
 // "Hrani" tab - kombinuje Dashboard (izbor mačke + ručno hranjenje) i
 // Care List (sedmični checklist rasporeda, filtriran po IZABRANOJ mački).
@@ -24,6 +25,7 @@ class FeedingScreen extends StatefulWidget {
   final void Function(int grams) onFedSuccess;
   final Map<int, Map<String, dynamic>> feedingSummaryByCat;
   final VoidCallback onCatsChanged;
+final Future<bool> Function(String name, CatProfile profile) onAddCat;
 
   const FeedingScreen({
     super.key,
@@ -37,6 +39,7 @@ class FeedingScreen extends StatefulWidget {
     required this.onFedSuccess,
     required this.feedingSummaryByCat,
     required this.onCatsChanged,
+    required this.onAddCat
   });
 
   @override
@@ -152,7 +155,7 @@ class _FeedingScreenState extends State<FeedingScreen> with SingleTickerProvider
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CatProfileScreen(baseUrl: widget.baseUrl, onSaved: widget.onCatsChanged),
+       builder: (context) => AddCatScreen(onSave: widget.onAddCat),
       ),
     );
   }
@@ -161,7 +164,11 @@ class _FeedingScreenState extends State<FeedingScreen> with SingleTickerProvider
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CatProfileScreen(baseUrl: widget.baseUrl, existingCat: cat, onSaved: widget.onCatsChanged),
+      builder: (context) => AddCatScreen(
+        onSave: widget.onAddCat,
+        existingCat: cat,
+        // dodaj onUpdate ili onDelete ako ih prolaziš sa parenta
+      ),
       ),
     );
   }
