@@ -12,13 +12,10 @@ class ServicesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Uklonjen appBar skroz kako ne bi gurao sadržaj dole
       body: SafeArea(
         child: ListView(
-          // Postavljene identične margine pri vrhu kao na glavnom ekranu
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           children: [
-            // Naslov poravnat skroz gore-lijevo
             const Padding(
               padding: EdgeInsets.only(top: 4, bottom: 20),
               child: Text(

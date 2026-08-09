@@ -3,8 +3,7 @@ import '../models/cat.dart';
 import '../models/cat_profile.dart';
 import '../theme/app_colors.dart';
 
-// Ekran za dodavanje NOVE mačke (existingCat == null) ili uređivanje POSTOJEĆE
-// (existingCat != null) - isti ekran, ista mjesta gdje se podaci čuvaju.
+// Dodaj NOVU mačku (existingCat == null) ili uredi POSTOJEĆU (existingCat != null).
 class AddCatScreen extends StatefulWidget {
   final Future<bool> Function(String name, CatProfile profile) onSave;
   final Cat? existingCat;
@@ -63,7 +62,9 @@ class _AddCatScreenState extends State<AddCatScreen> {
     if (ok) {
       Navigator.pop(context);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEditMode ? 'Nije uspjelo čuvanje izmjena.' : 'Nije uspjelo dodavanje mačke.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(isEditMode ? 'Nije uspjelo čuvanje izmjena.' : 'Nije uspjelo dodavanje mačke.')),
+      );
     }
   }
 
@@ -73,7 +74,7 @@ class _AddCatScreenState extends State<AddCatScreen> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Obrisati ${widget.existingCat!.name}?'),
-        content: const Text('Ovo će trajno obrisati i cijelu njenu historiju hranjenja i sve rasporede. Ne može se poništiti.'),
+        content: const Text('Ovo će trajno obrisati i historiju hranjenja i rasporede. Ne može se poništiti.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Otkaži')),
           TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Obriši', style: TextStyle(color: Colors.redAccent))),
@@ -81,7 +82,6 @@ class _AddCatScreenState extends State<AddCatScreen> {
       ),
     );
     if (confirm != true) return;
-
     setState(() => _isDeleting = true);
     final ok = await widget.onDelete!();
     if (!mounted) return;

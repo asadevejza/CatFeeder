@@ -53,7 +53,7 @@ class _CareScreenState extends State<CareScreen> with SingleTickerProviderStateM
   @override
   void didUpdateWidget(covariant CareScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.cats.length != widget.cats.length) _loadProfiles();
+    _loadProfiles();
   }
 
   Future<void> _loadProfiles() async {
@@ -391,7 +391,8 @@ class _OverviewCard extends StatelessWidget {
 class _StatColumn extends StatelessWidget {
   final String label;
   final String value;
-  const _StatColumn({required this.label, required this.value});
+  final Color? valueColor;
+  const _StatColumn({required this.label, required this.value, this.valueColor});
 
   @override
   Widget build(BuildContext context) {
@@ -400,7 +401,7 @@ class _StatColumn extends StatelessWidget {
       children: [
         Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
         const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+        Text(value, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: valueColor ?? AppColors.textDark)),
       ],
     );
   }
