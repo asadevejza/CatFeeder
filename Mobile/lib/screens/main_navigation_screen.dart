@@ -7,6 +7,8 @@ import '../services/settings_service.dart';
 import '../services/notification_service.dart';
 import '../services/profile_service.dart';
 import '../services/cat_avatar_service.dart';
+import '../services/locale_service.dart';
+import '../localization/app_strings.dart';
 import '../models/cat_profile.dart';
 import '../theme/app_colors.dart';
 
@@ -54,6 +56,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     NotificationService.requestPermissions();
     fetchSensorData();
     fetchCats();
+    LocaleService.getLocale().then((code) => AppStrings.locale.value = code);
   }
 
   Future<void> fetchSensorData() async {

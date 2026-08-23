@@ -3,7 +3,6 @@ import '../models/cat.dart';
 import '../models/cat_profile.dart';
 import '../theme/app_colors.dart';
 
-// Dodaj NOVU mačku (existingCat == null) ili uredi POSTOJEĆU (existingCat != null).
 class AddCatScreen extends StatefulWidget {
   final Future<bool> Function(String name, CatProfile profile) onSave;
   final Cat? existingCat;

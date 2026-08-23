@@ -25,13 +25,12 @@ class DeviceScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Uređaji')),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: onRefresh,
               child: ListView(
-                padding: const EdgeInsets.all(18.0),
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
                 children: [
                   InkWell(
                     borderRadius: BorderRadius.circular(24),
@@ -105,7 +104,7 @@ class DeviceScreen extends StatelessWidget {
                                 child: _MiniStat(
                                   label: 'Voda',
                                   value: waterLevel != null ? '${waterLevel!.toStringAsFixed(0)}%' : '--',
-                                  color: (waterLevel != null && waterLevel! < 20) ? AppColors.danger : AppColors.primary,
+                                  color: AppColors.primary,
                                 ),
                               ),
                               const SizedBox(width: 10),
