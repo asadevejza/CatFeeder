@@ -316,7 +316,11 @@ class _DashboardTab extends StatelessWidget {
                 child: _StatColumn(label: 'Trenutno', value: waterLevel == null ? '--' : '${waterLevel!.toStringAsFixed(0)}%'),
               ),
               Expanded(
-                child: _StatColumn(label: 'Status', value: (waterLevel ?? 100) < 20 ? 'Nisko' : 'U redu'),
+                child: _StatColumn(
+                  label: 'Status',
+                  value: (waterLevel ?? 100) < 20 ? 'Nisko' : 'U redu',
+                  valueColor: (waterLevel ?? 100) < 20 ? AppColors.danger : Colors.green,
+                ),
               ),
               _MiniSparkline(color: AppColors.primary),
             ],
