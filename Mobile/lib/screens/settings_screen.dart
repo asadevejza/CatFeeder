@@ -117,14 +117,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             children: [
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               Row(
                 children: [
-                  CircleAvatar(
-                    radius: 34,
-                    backgroundColor: AppColors.tint50,
-                    child: const Icon(Icons.person_rounded, color: AppColors.primary, size: 32),
-                  ),
+                  const CircleAvatar(radius: 34, backgroundColor: AppColors.tint50, child: Icon(Icons.person_rounded, color: AppColors.primary, size: 32)),
                   const SizedBox(width: 16),
                   Text(ownerName?.trim().isNotEmpty == true ? ownerName! : AppStrings.t('user'),
                       style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
@@ -197,20 +193,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 icon: Icons.wifi_tethering_rounded,
                 label: AppStrings.t('server_address'),
                 subtitle: widget.baseUrl,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ServerAddressScreen(currentBaseUrl: widget.baseUrl, onSave: widget.onSaveBaseUrl)),
-                ),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ServerAddressScreen(currentBaseUrl: widget.baseUrl, onSave: widget.onSaveBaseUrl))),
               ),
               _ProfileListItem(
                 icon: Icons.notifications_active_outlined,
                 label: AppStrings.t('notifications'),
                 subtitle: AppStrings.t('notifications_sub'),
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Uključene u Android/iOS Settings za ovu app.')),
-                ),
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Uključene u Android/iOS Settings za ovu app.'))),
               ),
-              // --- Prekidač jezika ---
               Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -223,9 +213,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: const Icon(Icons.language_rounded, color: AppColors.primary, size: 20),
                     ),
                     const SizedBox(width: 14),
-                    Expanded(
-                      child: Text(AppStrings.t('language'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                    ),
+                    Expanded(child: Text(AppStrings.t('language'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15))),
                     _LangPill(label: 'BS', selected: AppStrings.locale.value == 'bs', onTap: () => _changeLocale('bs')),
                     const SizedBox(width: 8),
                     _LangPill(label: 'EN', selected: AppStrings.locale.value == 'en', onTap: () => _changeLocale('en')),
@@ -265,12 +253,8 @@ class _LangPill extends StatelessWidget {
       borderRadius: BorderRadius.circular(100),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.tint50,
-          borderRadius: BorderRadius.circular(100),
-        ),
-        child: Text(label,
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: selected ? Colors.white : AppColors.primaryDark)),
+        decoration: BoxDecoration(color: selected ? AppColors.primary : AppColors.tint50, borderRadius: BorderRadius.circular(100)),
+        child: Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: selected ? Colors.white : AppColors.primaryDark)),
       ),
     );
   }

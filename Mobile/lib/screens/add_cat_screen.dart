@@ -10,14 +10,7 @@ class AddCatScreen extends StatefulWidget {
   final Future<bool> Function(int catId, String name, CatProfile profile)? onUpdate;
   final Future<bool> Function()? onDelete;
 
-  const AddCatScreen({
-    super.key,
-    required this.onSave,
-    this.existingCat,
-    this.existingProfile,
-    this.onUpdate,
-    this.onDelete,
-  });
+  const AddCatScreen({super.key, required this.onSave, this.existingCat, this.existingProfile, this.onUpdate, this.onDelete});
 
   @override
   State<AddCatScreen> createState() => _AddCatScreenState();
@@ -48,22 +41,15 @@ class _AddCatScreenState extends State<AddCatScreen> {
       ageYears: int.parse(_ageController.text.trim()),
       weightKg: double.parse(_weightController.text.trim().replaceAll(',', '.')),
     );
-
-    final bool ok;
-    if (isEditMode) {
-      ok = await widget.onUpdate!(widget.existingCat!.id, _nameController.text.trim(), profile);
-    } else {
-      ok = await widget.onSave(_nameController.text.trim(), profile);
-    }
-
+    final bool ok = isEditMode
+        ? await widget.onUpdate!(widget.existingCat!.id, _nameController.text.trim(), profile)
+        : await widget.onSave(_nameController.text.trim(), profile);
     if (!mounted) return;
     setState(() => _isSaving = false);
     if (ok) {
       Navigator.pop(context);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(isEditMode ? 'Nije uspjelo čuvanje izmjena.' : 'Nije uspjelo dodavanje mačke.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEditMode ? 'Nije uspjelo čuvanje izmjena.' : 'Nije uspjelo dodavanje mačke.')));
     }
   }
 
@@ -115,40 +101,29 @@ class _AddCatScreenState extends State<AddCatScreen> {
             const SizedBox(height: 18),
             const Text('Spol', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(child: _genderChip('Mužjak', Icons.male_rounded)),
-                const SizedBox(width: 12),
-                Expanded(child: _genderChip('Ženka', Icons.female_rounded)),
-              ],
-            ),
+            Row(children: [
+              Expanded(child: _genderChip('Mužjak', Icons.male_rounded)),
+              const SizedBox(width: 12),
+              Expanded(child: _genderChip('Ženka', Icons.female_rounded)),
+            ]),
             const SizedBox(height: 18),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Godine', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                      const SizedBox(height: 8),
-                      _field(_ageController, '2', keyboardType: TextInputType.number),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Težina (kg)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                      const SizedBox(height: 8),
-                      _field(_weightController, '4.5', keyboardType: const TextInputType.numberWithOptions(decimal: true)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Godine', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  _field(_ageController, '2', keyboardType: TextInputType.number),
+                ]),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Težina (kg)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  _field(_weightController, '4.5', keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+                ]),
+              ),
+            ]),
             const SizedBox(height: 18),
             const Text('Rasa', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
             const SizedBox(height: 8),
@@ -203,18 +178,11 @@ class _AddCatScreenState extends State<AddCatScreen> {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: selected ? AppColors.primary : Colors.grey.shade200, width: selected ? 1.6 : 1),
         ),
-        child: Column(
-          children: [
-            Icon(icon, color: selected ? AppColors.primary : Colors.black45),
-            const SizedBox(height: 4),
-            Text(label,
-                style: TextStyle(
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected ? AppColors.primaryDark : Colors.black54,
-                  fontSize: 13,
-                )),
-          ],
-        ),
+        child: Column(children: [
+          Icon(icon, color: selected ? AppColors.primary : Colors.black45),
+          const SizedBox(height: 4),
+          Text(label, style: TextStyle(fontWeight: selected ? FontWeight.w700 : FontWeight.w500, color: selected ? AppColors.primaryDark : Colors.black54, fontSize: 13)),
+        ]),
       ),
     );
   }
