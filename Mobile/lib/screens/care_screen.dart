@@ -181,16 +181,25 @@ class _CatSelectorRow extends StatelessWidget {
                 child: Column(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(2),
+                      padding: const EdgeInsets.all(2.5),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: selected ? AppColors.primary : Colors.transparent, width: 2),
+                        gradient: selected
+                            ? const LinearGradient(colors: [AppColors.primaryLight, AppColors.primary], begin: Alignment.topLeft, end: Alignment.bottomRight)
+                            : null,
+                        boxShadow: selected
+                            ? [BoxShadow(color: AppColors.primary.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 3))]
+                            : null,
                       ),
-                      child: CircleAvatar(
-                        radius: 26,
-                        backgroundColor: AppColors.tint50,
-                        backgroundImage: avatarPath != null ? FileImage(File(avatarPath)) : null,
-                        child: avatarPath == null ? const Text('🐈', style: TextStyle(fontSize: 22)) : null,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.background),
+                        child: CircleAvatar(
+                          radius: 26,
+                          backgroundColor: AppColors.tint50,
+                          backgroundImage: avatarPath != null ? FileImage(File(avatarPath)) : null,
+                          child: avatarPath == null ? const Text('🐈', style: TextStyle(fontSize: 22)) : null,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 6),

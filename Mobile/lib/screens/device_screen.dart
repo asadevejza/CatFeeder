@@ -85,70 +85,92 @@ class _DeviceScreenState extends State<DeviceScreen> {
                           ),
                         ),
                         child: Container(
-                          padding: const EdgeInsets.all(18),
+                          padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: AppColors.card,
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: AppColors.cardBorder),
-                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 16, offset: const Offset(0, 6))],
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [AppColors.primary, AppColors.primaryDark],
+                            ),
+                            borderRadius: BorderRadius.circular(28),
+                            boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.28), blurRadius: 22, offset: const Offset(0, 10))],
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Stack(
                             children: [
-                              Row(
+                              // Dekorativna šapa u pozadini, samo za "wow" efekat
+                              Positioned(
+                                right: -18,
+                                top: -14,
+                                child: Icon(Icons.pets_rounded, size: 110, color: Colors.white.withOpacity(0.08)),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(color: AppColors.tint50, borderRadius: BorderRadius.circular(14)),
-                                    child: const Icon(Icons.icecream_rounded, color: AppColors.primary, size: 26),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(AppStrings.t('feeder_name'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.textDark)),
-                                        const SizedBox(height: 4),
-                                        Row(
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 48,
+                                        height: 48,
+                                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.16), borderRadius: BorderRadius.circular(14)),
+                                        child: const Icon(Icons.icecream_rounded, color: Colors.white, size: 26),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle)),
-                                            const SizedBox(width: 6),
-                                            Text(AppStrings.t('online'), style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                                            Text(AppStrings.t('feeder_name'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Colors.white)),
+                                            const SizedBox(height: 4),
+                                            Row(
+                                              children: [
+                                                Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF7ED957), shape: BoxShape.circle)),
+                                                const SizedBox(width: 6),
+                                                Text(AppStrings.t('online'), style: const TextStyle(fontSize: 12, color: Colors.white70)),
+                                              ],
+                                            ),
                                           ],
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                      const Icon(Icons.chevron_right_rounded, color: Colors.white70),
+                                    ],
                                   ),
-                                  const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+                                  const SizedBox(height: 18),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _MiniStatLight(
+                                          icon: Icons.icecream_outlined,
+                                          label: AppStrings.t('food'),
+                                          value: '${widget.foodLevel.toStringAsFixed(0)}%',
+                                          accentColor: widget.foodLevel < 20 ? const Color(0xFFFF8A65) : const Color(0xFFFFD54F),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: _MiniStatLight(
+                                          icon: Icons.water_drop_rounded,
+                                          label: AppStrings.t('water'),
+                                          value: widget.waterLevel != null ? '${widget.waterLevel!.toStringAsFixed(0)}%' : '--',
+                                          accentColor: (widget.waterLevel != null && widget.waterLevel! < 20) ? const Color(0xFFFF8A65) : const Color(0xFF81D4FA),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: _MiniStatLight(
+                                          icon: Icons.thermostat_rounded,
+                                          label: AppStrings.t('temperature'),
+                                          value: '${widget.temp.toStringAsFixed(0)}°C',
+                                          accentColor: const Color(0xFFFF8A80),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Text(AppStrings.t('tap_for_status'), style: const TextStyle(fontSize: 11, color: Colors.white70)),
+                                  ),
                                 ],
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _MiniStat(
-                                      label: AppStrings.t('food'),
-                                      value: '${widget.foodLevel.toStringAsFixed(0)}%',
-                                      color: widget.foodLevel < 20 ? AppColors.danger : Colors.amber.shade700,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: _MiniStat(
-                                      label: AppStrings.t('water'),
-                                      value: widget.waterLevel != null ? '${widget.waterLevel!.toStringAsFixed(0)}%' : '--',
-                                      color: (widget.waterLevel != null && widget.waterLevel! < 20) ? AppColors.danger : AppColors.primary,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(child: _MiniStat(label: AppStrings.t('temperature'), value: '${widget.temp.toStringAsFixed(0)}°C', color: Colors.redAccent)),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: Text(AppStrings.t('tap_for_status'), style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
                               ),
                             ],
                           ),
@@ -221,22 +243,25 @@ class _DeviceScreenState extends State<DeviceScreen> {
   }
 }
 
-class _MiniStat extends StatelessWidget {
+class _MiniStatLight extends StatelessWidget {
+  final IconData icon;
   final String label;
   final String value;
-  final Color color;
-  const _MiniStat({required this.label, required this.value, required this.color});
+  final Color accentColor;
+  const _MiniStatLight({required this.icon, required this.label, required this.value, required this.accentColor});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: BoxDecoration(color: color.withOpacity(0.08), borderRadius: BorderRadius.circular(14)),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+      decoration: BoxDecoration(color: Colors.white.withOpacity(0.14), borderRadius: BorderRadius.circular(16)),
       child: Column(
         children: [
-          Text(value, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: color)),
+          Icon(icon, size: 16, color: accentColor),
+          const SizedBox(height: 5),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Colors.white)),
           const SizedBox(height: 2),
-          Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
+          Text(label, style: const TextStyle(fontSize: 10, color: Colors.white70)),
         ],
       ),
     );

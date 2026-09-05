@@ -5,7 +5,7 @@ class AppStrings {
 
   static const Map<String, Map<String, String>> _values = {
     'bs': {
-      'device': 'Uređaji', 'care': 'Care', 'services': 'Servisi', 'me': 'Ja',
+      'device': 'Uređaji', 'care': 'Njega', 'services': 'Servisi', 'me': 'Ja',
       'my_cats': 'Moje mačke', 'add': 'Dodaj', 'server_address': 'Adresa servera',
       'notifications': 'Notifikacije', 'notifications_sub': 'Podsjetnici i upozorenja o niskom nivou',
       'about_app': 'O aplikaciji', 'about_app_sub': 'Verzija, licenca, o projektu',
@@ -21,7 +21,7 @@ class AppStrings {
       'feeding_schedule': 'Raspored hranjenja i evidencija', 'feeding_schedule_sub': 'Podesi automatsko hranjenje i pregledaj historiju',
       'store': 'Prodavnica', 'store_sub': 'Hrana, dodaci i oprema',
       'no_cats_yet': 'Nemaš još nijednu mačku.', 'user': 'Korisnik',
-      'dashboard': 'Dashboard', 'care_list': 'Care List', 'overview': 'Pregled', 'edit': 'Uredi',
+      'dashboard': 'Pregled', 'care_list': 'Lista njege', 'overview': 'Statistika', 'edit': 'Uredi',
       'weight': 'Težina', 'food_intake': 'Unos hrane', 'meals': 'Obroci', 'total': 'Ukupno',
       'water_level': 'Nivo vode', 'current': 'Trenutno', 'status': 'Status', 'low': 'Nisko',
       'ok': 'U redu', 'trend_7d': '7-dnevni trend',
