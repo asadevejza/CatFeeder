@@ -117,14 +117,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             children: [
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  const CircleAvatar(radius: 34, backgroundColor: AppColors.tint50, child: Icon(Icons.person_rounded, color: AppColors.primary, size: 32)),
-                  const SizedBox(width: 16),
-                  Text(ownerName?.trim().isNotEmpty == true ? ownerName! : AppStrings.t('user'),
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                ],
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.primary, AppColors.primaryDark],
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.28), blurRadius: 20, offset: const Offset(0, 8))],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 62,
+                      height: 62,
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.18), shape: BoxShape.circle),
+                      child: const Icon(Icons.person_rounded, color: Colors.white, size: 32),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(ownerName?.trim().isNotEmpty == true ? ownerName! : AppStrings.t('user'),
+                              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: Colors.white)),
+                          const SizedBox(height: 4),
+                          Text(AppStrings.t('welcome_back'), style: const TextStyle(fontSize: 12, color: Colors.white70)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 30),
               Row(
@@ -151,7 +177,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   final avatarPath = avatarPaths[cat.id];
                   final profile = profiles[cat.id];
                   final subtitleParts = <String>[
-                    if (profile != null) '${profile.ageYears} god.',
+                    if (profile != null) '${profile.ageYears} ${AppStrings.t('years_suffix')}',
                     if (profile != null) profile.breed,
                   ];
                   return InkWell(
@@ -160,14 +186,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: AppColors.cardBorder)),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+                      ),
                       child: Row(
                         children: [
-                          CircleAvatar(
-                            radius: 22,
-                            backgroundColor: AppColors.tint50,
-                            backgroundImage: avatarPath != null ? FileImage(File(avatarPath)) : null,
-                            child: avatarPath == null ? const Text('🐈', style: TextStyle(fontSize: 20)) : null,
+                          Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(colors: [AppColors.gold.withOpacity(0.7), AppColors.gold], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                            ),
+                            child: CircleAvatar(
+                              radius: 22,
+                              backgroundColor: AppColors.tint50,
+                              backgroundImage: avatarPath != null ? FileImage(File(avatarPath)) : null,
+                              child: avatarPath == null ? const Text('🐈', style: TextStyle(fontSize: 20)) : null,
+                            ),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -199,18 +236,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 icon: Icons.notifications_active_outlined,
                 label: AppStrings.t('notifications'),
                 subtitle: AppStrings.t('notifications_sub'),
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Uključene u Android/iOS Settings za ovu app.'))),
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppStrings.t('notifications_info')))),
               ),
               Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: AppColors.cardBorder)),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+                ),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: AppColors.tint50, shape: BoxShape.circle),
-                      child: const Icon(Icons.language_rounded, color: AppColors.primary, size: 20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: [AppColors.primaryLight, AppColors.primary], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.language_rounded, color: Colors.white, size: 20),
                     ),
                     const SizedBox(width: 14),
                     Expanded(child: Text(AppStrings.t('language'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15))),
@@ -229,7 +273,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   applicationName: 'CatFeeder',
                   applicationVersion: '1.0.0',
                   applicationIcon: const Icon(Icons.pets_rounded, color: AppColors.primary, size: 32),
-                  children: const [Padding(padding: EdgeInsets.only(top: 12), child: Text('IoT projekat za automatsko i ručno hranjenje mačaka.'))],
+                  children: [Padding(padding: const EdgeInsets.only(top: 12), child: Text(AppStrings.t('about_app_body')))],
                 ),
               ),
             ],
@@ -275,13 +319,20 @@ class _ProfileListItem extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: AppColors.cardBorder)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: AppColors.tint50, shape: BoxShape.circle),
-              child: Icon(icon, color: AppColors.primary, size: 20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [AppColors.primaryLight, AppColors.primary], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: Colors.white, size: 20),
             ),
             const SizedBox(width: 14),
             Expanded(

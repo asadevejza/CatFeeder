@@ -68,7 +68,18 @@ class _CareScreenState extends State<CareScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _loadProfiles() async {
-    final profiles = await ProfileService.getAllCatProfiles();
+    var profiles = await ProfileService.getAllCatProfiles();
+    // Ako neka mačka (npr. dodana prije ove funkcije, ili preko drugog uređaja)
+    // nema lokalni profil, napravi podrazumijevani da Dashboard nikad ne ostane prazan.
+    bool seededAny = false;
+    for (final cat in widget.cats) {
+      if (!profiles.containsKey(cat.id)) {
+        final seeded = CatProfile(gender: 'Mužjak', breed: AppStrings.t('unknown_breed'), ageYears: 0, weightKg: 0);
+        await ProfileService.saveCatProfile(cat.id, seeded);
+        seededAny = true;
+      }
+    }
+    if (seededAny) profiles = await ProfileService.getAllCatProfiles();
     final avatars = <int, String>{};
     for (final cat in widget.cats) {
       final path = await CatAvatarService.getAvatarPath(cat.id);
@@ -130,7 +141,6 @@ class _CareScreenState extends State<CareScreen> with SingleTickerProviderStateM
                     cat: _selectedCat,
                     profile: _selectedCat == null ? null : _catProfiles[_selectedCat!.id],
                     summary: _selectedCat == null ? null : widget.feedingSummaryByCat[_selectedCat!.id],
-                    waterLevel: widget.waterLevel,
                     baseUrl: widget.baseUrl,
                     onUpdateCat: widget.onUpdateCat,
                     onFeedNow: widget.onFeedNow,
@@ -243,7 +253,6 @@ class _DashboardTab extends StatelessWidget {
   final Cat? cat;
   final CatProfile? profile;
   final Map<String, dynamic>? summary;
-  final double? waterLevel;
   final String baseUrl;
   final Future<bool> Function(int catId, String name, CatProfile profile) onUpdateCat;
   final Future<bool> Function(int catId, int portionGrams) onFeedNow;
@@ -253,7 +262,6 @@ class _DashboardTab extends StatelessWidget {
     required this.cat,
     required this.profile,
     required this.summary,
-    required this.waterLevel,
     required this.baseUrl,
     required this.onUpdateCat,
     required this.onFeedNow,
@@ -404,7 +412,7 @@ class _DashboardTab extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(profile == null ? '--' : profile!.weightKg.toStringAsFixed(1),
+              Text((profile == null || profile!.weightKg <= 0) ? '--' : profile!.weightKg.toStringAsFixed(1),
                   style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800)),
               const Padding(
                 padding: EdgeInsets.only(left: 6, bottom: 6),
@@ -432,42 +440,7 @@ class _DashboardTab extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 14),
-        _OverviewCard(
-          title: AppStrings.t('water_level'),
-          trailing: AppStrings.t('trend_7d'),
-          onTrailingTap: () => _openTrend(context, TrendType.water),
-          child: Row(
-            children: [
-              Expanded(
-                child: _StatColumn(label: AppStrings.t('current'), value: waterLevel == null ? '--' : '${waterLevel!.toStringAsFixed(0)}%'),
-              ),
-              Expanded(
-                child: _StatColumn(
-                  label: AppStrings.t('status'),
-                  value: (waterLevel ?? 100) < 20 ? AppStrings.t('low') : AppStrings.t('ok'),
-                  valueColor: (waterLevel ?? 100) < 20 ? AppColors.danger : Colors.green,
-                ),
-              ),
-              _MiniSparkline(color: AppColors.primary),
-            ],
-          ),
-        ),
-        const SizedBox(height: 18),
-        if (profile != null) ...[
-          const SizedBox(height: 18),
-          Text(AppStrings.t('about_cat'), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.grey.shade800)),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(child: _InfoChip(icon: Icons.cake_rounded, label: '${profile!.ageYears} ${AppStrings.t('years_suffix')}')),
-              const SizedBox(width: 10),
-              Expanded(child: _InfoChip(icon: profile!.gender == 'Ženka' ? Icons.female_rounded : Icons.male_rounded, label: AppStrings.t(profile!.gender == 'Ženka' ? 'female' : 'male'))),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _InfoChip(icon: Icons.pets_rounded, label: profile!.breed, fullWidth: true),
-        ],
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -557,30 +530,6 @@ class _MiniSparkline extends StatelessWidget {
             child: Container(width: 6, height: h, decoration: BoxDecoration(color: color.withOpacity(0.35), borderRadius: BorderRadius.circular(3))),
           );
         }),
-      ),
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool fullWidth;
-  const _InfoChip({required this.icon, required this.label, this.fullWidth = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: fullWidth ? double.infinity : null,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(14)),
-      child: Row(
-        mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: Colors.grey.shade600),
-          const SizedBox(width: 8),
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-        ],
       ),
     );
   }
@@ -745,6 +694,21 @@ class _CareListTabState extends State<_CareListTab> {
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(100),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: progress),
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.easeOut,
+                builder: (context, value, _) => LinearProgressIndicator(
+                  value: value,
+                  minHeight: 8,
+                  backgroundColor: AppColors.tint50,
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                ),
+              ),
+            ),
             const SizedBox(height: 14),
             Row(
               children: _weekDays.map((day) {
@@ -803,7 +767,7 @@ class _CareListTabState extends State<_CareListTab> {
                   decoration: BoxDecoration(
                     color: AppColors.card,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.cardBorder),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
                   ),
                   child: Row(
                     children: [

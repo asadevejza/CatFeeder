@@ -97,6 +97,10 @@ class AppStrings {
       'feed_now': 'Nahrani sada', 'feed_dialog_title': 'Nahrani mačku', 'feed_button': 'Nahrani',
       'fed_success_prefix': 'Uspješno ispušteno ', 'fed_success_for': ' g hrane za ',
       'feed_failed': 'Neuspješno hranjenje.', 'no_cats_to_feed': 'Prvo dodaj mačku da bi je mogao nahraniti.',
+      'services_subtitle': 'Sve što ti treba za brigu o mački, na jednom mjestu',
+      'notifications_info': 'Uključene u Android/iOS Settings za ovu app.',
+      'about_app_body': 'IoT projekat za automatsko i ručno hranjenje mačaka.',
+      'welcome_back': 'Dobrodošao nazad! 👋',
     },
     'en': {
       'device': 'Devices', 'care': 'Care', 'services': 'Services', 'me': 'Me',
@@ -191,6 +195,10 @@ class AppStrings {
       'feed_now': 'Feed now', 'feed_dialog_title': 'Feed cat', 'feed_button': 'Feed',
       'fed_success_prefix': 'Successfully dispensed ', 'fed_success_for': ' g of food for ',
       'feed_failed': 'Feeding failed.', 'no_cats_to_feed': 'Add a cat first before you can feed it.',
+      'services_subtitle': 'Everything you need to care for your cat, in one place',
+      'notifications_info': 'Enabled in Android/iOS Settings for this app.',
+      'about_app_body': 'An IoT project for automatic and manual cat feeding.',
+      'welcome_back': 'Welcome back! 👋',
     },
   };
 

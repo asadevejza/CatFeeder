@@ -271,19 +271,32 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
                           );
                         }
                         final log = logs[index - 1];
-                        return Card(
+                        return Container(
                           margin: const EdgeInsets.symmetric(vertical: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+                          ),
                           child: ListTile(
-                            leading: const CircleAvatar(
-                              backgroundColor: Color(0xFFE8F5E9),
-                              child: Icon(Icons.check_circle, color: Colors.green),
+                            contentPadding: EdgeInsets.zero,
+                            leading: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(colors: [Color(0xFF7ED957), Color(0xFF4CAF50)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                                shape: BoxShape.circle,
+                                boxShadow: [BoxShadow(color: Colors.green.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))],
+                              ),
+                              child: const Icon(Icons.check_rounded, color: Colors.white),
                             ),
                             title: Text('${catName(log['catId'])} • ${log['portionGrams']}g',
-                                style: const TextStyle(fontWeight: FontWeight.w600)),
+                                style: const TextStyle(fontWeight: FontWeight.w700)),
                             subtitle: Text('${AppStrings.t('triggered_by_prefix')}${log['triggeredBy']}'),
                             trailing: Text(
                               log['timestamp'] != null ? log['timestamp'].toString().substring(11, 16) : '',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark),
                             ),
                           ),
                         );
@@ -310,16 +323,29 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
                             itemCount: schedules.length,
                             itemBuilder: (context, index) {
                               final schedule = schedules[index];
-                              return Card(
+                              return Container(
                                 margin: const EdgeInsets.symmetric(vertical: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(18),
+                                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+                                ),
                                 child: ListTile(
+                                  contentPadding: EdgeInsets.zero,
                                   onTap: () => openScheduleForm(existing: schedule as Map<String, dynamic>),
-                                  leading: const CircleAvatar(
-                                    backgroundColor: Color(0xFFFFF3E0),
-                                    child: Icon(Icons.alarm, color: AppColors.primary),
+                                  leading: Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(colors: [AppColors.primaryLight, AppColors.primary], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                                      shape: BoxShape.circle,
+                                      boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))],
+                                    ),
+                                    child: const Icon(Icons.alarm_rounded, color: Colors.white),
                                   ),
                                   title: Text('${catName(schedule['catId'])} • ${formatTime(schedule['time'])}',
-                                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                                      style: const TextStyle(fontWeight: FontWeight.w700)),
                                   subtitle: Text('${AppStrings.t('amount_prefix')}${schedule['portionGrams']}g (${translateDays(schedule['daysOfWeek'] as String?)})'),
                                   trailing: IconButton(
                                     icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
@@ -352,8 +378,13 @@ class _WeeklyFeedingChart extends StatelessWidget {
     final maxValue = entries.map((e) => e.value).fold<double>(0, (a, b) => a > b ? a : b);
     final chartMaxY = maxValue <= 0 ? 100.0 : maxValue * 1.35;
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 14, offset: const Offset(0, 5))],
+      ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(10, 20, 20, 12),
         child: Column(

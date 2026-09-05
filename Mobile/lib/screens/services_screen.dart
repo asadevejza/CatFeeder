@@ -20,7 +20,11 @@ class ServicesScreen extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             children: [
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+              Text(AppStrings.t('services'), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.textDark)),
+              const SizedBox(height: 4),
+              Text(AppStrings.t('services_subtitle'), style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
+              const SizedBox(height: 22),
               _ServiceCard(
                 icon: Icons.event_note_rounded,
                 color: AppColors.primary,
@@ -65,13 +69,22 @@ class _ServiceCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.shade100)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 14, offset: const Offset(0, 5))],
+        ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
-              child: Icon(icon, color: color, size: 26),
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [color.withOpacity(0.85), color], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: Icon(icon, color: Colors.white, size: 24),
             ),
             const SizedBox(width: 14),
             Expanded(

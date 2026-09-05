@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../api_config.dart';
 import '../services/profile_service.dart';
 import '../services/weight_history_service.dart';
+import '../models/cat_profile.dart';
 import '../theme/app_colors.dart';
 import '../localization/app_strings.dart';
 
@@ -161,9 +162,11 @@ class _TrendScreenState extends State<TrendScreen> {
     if (result == null) return;
     await WeightHistoryService.logWeight(widget.catId, result);
     final existing = await ProfileService.getCatProfile(widget.catId);
-    if (existing != null) {
-      await ProfileService.saveCatProfile(widget.catId, existing.copyWith(weightKg: result));
-    }
+    // Ako mačka još nema profil (npr. dodana prije uvođenja ove funkcije),
+    // napravi novi umjesto da tiho odustaneš — inače težina nikad ne bi bila spašena.
+    final updated = existing?.copyWith(weightKg: result) ??
+        CatProfile(gender: 'Mužjak', breed: AppStrings.t('unknown_breed'), ageYears: 0, weightKg: result);
+    await ProfileService.saveCatProfile(widget.catId, updated);
     _load();
   }
 
@@ -235,7 +238,7 @@ class _TrendScreenState extends State<TrendScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.grey.shade100),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 14, offset: const Offset(0, 5))],
                   ),
                   child: widget.type == TrendType.food ? _buildBarChart() : _buildLineChart(),
                 ),
@@ -373,7 +376,7 @@ class _StatBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
