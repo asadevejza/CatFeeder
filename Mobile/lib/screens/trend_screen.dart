@@ -6,10 +6,12 @@ import '../api_config.dart';
 import '../services/profile_service.dart';
 import '../services/weight_history_service.dart';
 import '../theme/app_colors.dart';
+import '../localization/app_strings.dart';
 
 enum TrendType { weight, food, water }
 
-const List<String> _dayLettersShort = ['P', 'U', 'S', 'Č', 'P', 'S', 'N']; // ponedjeljak..nedjelja
+const List<String> _dayLettersShortBs = ['P', 'U', 'S', 'Č', 'P', 'S', 'N']; // ponedjeljak..nedjelja
+const List<String> _dayLettersShortEn = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 class TrendScreen extends StatefulWidget {
   final TrendType type;
@@ -35,6 +37,8 @@ class _TrendScreenState extends State<TrendScreen> {
   bool _isLoading = true;
   List<DateTime> _days = [];
   List<double?> _values = [];
+
+  List<String> get _dayLettersShort => AppStrings.locale.value == 'en' ? _dayLettersShortEn : _dayLettersShortBs;
 
   @override
   void initState() {
@@ -135,7 +139,7 @@ class _TrendScreenState extends State<TrendScreen> {
     final result = await showDialog<double>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Zabilježi težinu'),
+        title: Text(AppStrings.t('log_weight_title')),
         content: TextField(
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -143,13 +147,13 @@ class _TrendScreenState extends State<TrendScreen> {
           decoration: const InputDecoration(suffixText: 'kg'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Otkaži')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(AppStrings.t('cancel'))),
           TextButton(
             onPressed: () {
               final parsed = double.tryParse(controller.text.trim().replaceAll(',', '.'));
               Navigator.pop(context, parsed);
             },
-            child: const Text('Sačuvaj'),
+            child: Text(AppStrings.t('save')),
           ),
         ],
       ),
@@ -166,11 +170,11 @@ class _TrendScreenState extends State<TrendScreen> {
   String get _title {
     switch (widget.type) {
       case TrendType.weight:
-        return 'Težina';
+        return AppStrings.t('weight');
       case TrendType.food:
-        return 'Unos hrane';
+        return AppStrings.t('food_intake');
       case TrendType.water:
-        return 'Nivo vode';
+        return AppStrings.t('water_level');
     }
   }
 
@@ -203,7 +207,9 @@ class _TrendScreenState extends State<TrendScreen> {
     final avg = knownValues.isEmpty ? null : knownValues.reduce((a, b) => a + b) / knownValues.length;
     final maxV = knownValues.isEmpty ? null : knownValues.reduce((a, b) => a > b ? a : b);
 
-    return Scaffold(
+    return ValueListenableBuilder<String>(
+      valueListenable: AppStrings.locale,
+      builder: (context, _, __) => Scaffold(
       appBar: AppBar(title: Text('$_title — ${widget.catName}')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -221,7 +227,7 @@ class _TrendScreenState extends State<TrendScreen> {
                     ),
                   ],
                 ),
-                const Text('Zadnji unos', style: TextStyle(fontSize: 12, color: Colors.black45)),
+                Text(AppStrings.t('latest_entry'), style: const TextStyle(fontSize: 12, color: Colors.black45)),
                 const SizedBox(height: 22),
                 Container(
                   height: 220,
@@ -236,9 +242,9 @@ class _TrendScreenState extends State<TrendScreen> {
                 const SizedBox(height: 18),
                 Row(
                   children: [
-                    Expanded(child: _StatBox(label: 'Prosjek', value: avg == null ? '--' : _formatValue(avg))),
+                    Expanded(child: _StatBox(label: AppStrings.t('average'), value: avg == null ? '--' : _formatValue(avg))),
                     const SizedBox(width: 10),
-                    Expanded(child: _StatBox(label: 'Maksimum', value: maxV == null ? '--' : _formatValue(maxV))),
+                    Expanded(child: _StatBox(label: AppStrings.t('maximum'), value: maxV == null ? '--' : _formatValue(maxV))),
                   ],
                 ),
                 if (widget.type == TrendType.weight) ...[
@@ -248,7 +254,7 @@ class _TrendScreenState extends State<TrendScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _logWeightDialog,
                       icon: const Icon(Icons.add_rounded),
-                      label: const Text('Zabilježi današnju težinu'),
+                      label: Text(AppStrings.t('log_todays_weight')),
                     ),
                   ),
                 ],
@@ -256,14 +262,14 @@ class _TrendScreenState extends State<TrendScreen> {
                   const SizedBox(height: 14),
                   Text(
                     widget.type == TrendType.food
-                        ? 'Zbir grama nahranjenih po danu, iz evidencije hranjenja.'
-                        : 'Nivo vode u spremniku prema zadnjem senzorskom očitavanju tog dana.',
+                        ? AppStrings.t('food_trend_note')
+                        : AppStrings.t('water_trend_note'),
                     style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                   ),
                 ],
               ],
             ),
-    );
+    ));
   }
 
   String _formatValue(double v) {
@@ -278,7 +284,7 @@ class _TrendScreenState extends State<TrendScreen> {
       if (v != null) spots.add(FlSpot(i.toDouble(), v));
     }
     if (spots.isEmpty) {
-      return Center(child: Text('Nema podataka za posljednjih 7 dana', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)));
+      return Center(child: Text(AppStrings.t('no_data_7_days'), style: TextStyle(color: Colors.grey.shade400, fontSize: 12)));
     }
     return LineChart(
       LineChartData(
@@ -319,7 +325,7 @@ class _TrendScreenState extends State<TrendScreen> {
   Widget _buildBarChart() {
     final hasAny = _values.any((v) => v != null && v > 0);
     if (!hasAny) {
-      return Center(child: Text('Nema podataka za posljednjih 7 dana', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)));
+      return Center(child: Text(AppStrings.t('no_data_7_days'), style: TextStyle(color: Colors.grey.shade400, fontSize: 12)));
     }
     return BarChart(
       BarChartData(

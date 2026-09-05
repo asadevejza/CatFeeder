@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/profile_service.dart';
 import '../theme/app_colors.dart';
+import '../localization/app_strings.dart';
 
 // NAPOMENA: hranilica (ESP32 firmver u ovom projektu) trenutno nema kameru
 // niti video stream. Ovaj ekran je UI za uparivanje i prikaz kamere u istom
@@ -41,12 +42,13 @@ class _CameraScreenState extends State<CameraScreen> {
     setState(() => _isPairing = true);
     // Simulacija traženja i povezivanja na kameru preko WiFi-ja.
     await Future.delayed(const Duration(seconds: 2));
-    await ProfileService.setCameraPaired(true, name: 'Kamera hranilice');
+    final name = AppStrings.t('default_camera_name');
+    await ProfileService.setCameraPaired(true, name: name);
     if (!mounted) return;
     setState(() {
       _isPairing = false;
       _isPaired = true;
-      _cameraName = 'Kamera hranilice';
+      _cameraName = name;
     });
   }
 
@@ -61,14 +63,16 @@ class _CameraScreenState extends State<CameraScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Kamera')),
+    return ValueListenableBuilder<String>(
+      valueListenable: AppStrings.locale,
+      builder: (context, _, __) => Scaffold(
+      appBar: AppBar(title: Text(AppStrings.t('camera_title'))),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _isPaired
-              ? _LiveView(catName: widget.catName, cameraName: _cameraName ?? 'Kamera hranilice', onUnpair: _unpair)
+              ? _LiveView(catName: widget.catName, cameraName: _cameraName ?? AppStrings.t('default_camera_name'), onUnpair: _unpair)
               : _PairingPrompt(isPairing: _isPairing, onStart: _startPairing),
-    );
+    ));
   }
 }
 
@@ -96,15 +100,15 @@ class _PairingPrompt extends StatelessWidget {
             ),
             const SizedBox(height: 22),
             Text(
-              isPairing ? 'Povezivanje sa kamerom...' : 'Poveži kameru',
+              isPairing ? AppStrings.t('connecting_camera') : AppStrings.t('pair_camera'),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 10),
             Text(
               isPairing
-                  ? 'Provjeri da je kamera u dometu WiFi mreže.'
-                  : 'Uključi kameru na hranilici i pritisni dugme ispod da je upariš i počneš da nadgledaš svoju mačku uživo.',
+                  ? AppStrings.t('check_wifi_range')
+                  : AppStrings.t('pair_camera_explain'),
               style: const TextStyle(color: Colors.black54, fontSize: 13),
               textAlign: TextAlign.center,
             ),
@@ -114,7 +118,7 @@ class _PairingPrompt extends StatelessWidget {
             else
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(onPressed: onStart, child: const Text('Započni uparivanje')),
+                child: ElevatedButton(onPressed: onStart, child: Text(AppStrings.t('start_pairing'))),
               ),
           ],
         ),
@@ -156,14 +160,14 @@ class _LiveView extends StatelessWidget {
                           decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
                         ),
                         const SizedBox(width: 6),
-                        const Text('UŽIVO', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
+                        Text(AppStrings.t('live_label'), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
                       ],
                     ),
                   ),
                   Positioned(
                     bottom: 14,
                     left: 14,
-                    child: Text('Nadgledanje: $catName', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                    child: Text('${AppStrings.t('monitoring_prefix')}$catName', style: const TextStyle(color: Colors.white70, fontSize: 12)),
                   ),
                 ],
               ),
@@ -174,7 +178,7 @@ class _LiveView extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(
-            'Video prikaz je trenutno simulacija — poveži pravi video stream kad hardver kamere bude spreman.',
+            AppStrings.t('video_simulation_note'),
             style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
           ),
         ),
@@ -195,11 +199,11 @@ class _LiveView extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(cameraName, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      const Text('Upareno • Online', style: TextStyle(color: Colors.green, fontSize: 12)),
+                      Text(AppStrings.t('paired_online'), style: const TextStyle(color: Colors.green, fontSize: 12)),
                     ],
                   ),
                 ),
-                TextButton(onPressed: onUnpair, child: const Text('Ukloni')),
+                TextButton(onPressed: onUnpair, child: Text(AppStrings.t('remove'))),
               ],
             ),
           ),

@@ -38,7 +38,7 @@ class ServicesScreen extends StatelessWidget {
                 title: AppStrings.t('store'),
                 subtitle: AppStrings.t('store_sub'),
                 onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Uskoro dostupno.')),
+                  SnackBar(content: Text(AppStrings.t('coming_soon_snackbar'))),
                 ),
               ),
             ],

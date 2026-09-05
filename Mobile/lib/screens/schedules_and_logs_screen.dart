@@ -8,6 +8,7 @@ import '../services/notification_service.dart';
 import '../widgets/empty_state.dart';
 import 'schedule_form_screen.dart';
 import '../theme/app_colors.dart';
+import '../localization/app_strings.dart';
 
 class SchedulesAndLogsScreen extends StatefulWidget {
   final String baseUrl;
@@ -42,7 +43,7 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
 
   String catName(dynamic catId) {
     final match = widget.cats.where((c) => c.id == catId);
-    return match.isNotEmpty ? match.first.name : 'Nepoznata mačka';
+    return match.isNotEmpty ? match.first.name : AppStrings.t('unknown_cat');
   }
 
   // Zbraja ukupne grame hrane po danu, za posljednjih 7 dana (uključujući danas).
@@ -92,14 +93,34 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
     'sun': 'Ned',
   };
 
-  // Prima npr. "Monday,Wednesday,Friday" i vraća "Ponedjeljak, Srijeda, Petak".
-  // Ako naiđe na dan koji ne prepozna, samo ga ostavi kako jeste.
+  static const Map<String, String> _daysEnglish = {
+    'monday': 'Monday',
+    'mon': 'Mon',
+    'tuesday': 'Tuesday',
+    'tue': 'Tue',
+    'tues': 'Tue',
+    'wednesday': 'Wednesday',
+    'wed': 'Wed',
+    'thursday': 'Thursday',
+    'thu': 'Thu',
+    'thurs': 'Thu',
+    'friday': 'Friday',
+    'fri': 'Fri',
+    'saturday': 'Saturday',
+    'sat': 'Sat',
+    'sunday': 'Sunday',
+    'sun': 'Sun',
+  };
+
+  // Prima npr. "Monday,Wednesday,Friday" i vraća prevedene nazive dana,
+  // prema trenutno izabranom jeziku aplikacije.
   String translateDays(String? raw) {
     if (raw == null || raw.isEmpty) return '';
+    final dict = AppStrings.locale.value == 'en' ? _daysEnglish : _daysBosanski;
     return raw
         .split(',')
         .map((d) => d.trim())
-        .map((d) => _daysBosanski[d.toLowerCase()] ?? d)
+        .map((d) => dict[d.toLowerCase()] ?? d)
         .join(', ');
   }
 
@@ -122,7 +143,7 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
       if (!mounted) return;
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Greška pri čitanju istorije: $e')),
+        SnackBar(content: Text('${AppStrings.t('error_reading_history_prefix')}$e')),
       );
     }
   }
@@ -157,13 +178,13 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Obriši raspored?'),
-        content: const Text('Ova akcija se ne može poništiti.'),
+        title: Text(AppStrings.t('delete_schedule_q')),
+        content: Text(AppStrings.t('action_irreversible')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Otkaži')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(AppStrings.t('cancel'))),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Obriši', style: TextStyle(color: Colors.redAccent)),
+            child: Text(AppStrings.t('delete'), style: const TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
@@ -177,11 +198,11 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
         await NotificationService.cancelForSchedule(id);
         loadData();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Brisanje nije uspjelo.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppStrings.t('delete_failed'))));
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Greška: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${AppStrings.t('error_prefix')}$e')));
     }
   }
 
@@ -201,17 +222,19 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return ValueListenableBuilder<String>(
+      valueListenable: AppStrings.locale,
+      builder: (context, _, __) => Scaffold(
         appBar: AppBar(
-          title: const Text('Aktivnosti'),
+          title: Text(AppStrings.t('activities_title')),
           bottom: TabBar(
             controller: _tabController,
             labelColor: AppColors.primary,
             unselectedLabelColor: Colors.black45,
             indicatorColor: AppColors.primary,
-            tabs: const [
-              Tab(text: 'Historija'),
-              Tab(text: 'Rasporedi'),
+            tabs: [
+              Tab(text: AppStrings.t('history_tab')),
+              Tab(text: AppStrings.t('schedules_tab')),
             ],
           ),
         ),
@@ -220,7 +243,7 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
                 onPressed: () => openScheduleForm(),
                 backgroundColor: AppColors.primary,
                 icon: const Icon(Icons.add),
-                label: const Text('Novi raspored'),
+                label: Text(AppStrings.t('new_schedule')),
               )
             : null,
         body: isLoading
@@ -238,12 +261,12 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
                           return _WeeklyFeedingChart(dailyTotals: last7DaysTotals());
                         }
                         if (logs.isEmpty) {
-                          return const Padding(
-                            padding: EdgeInsets.only(top: 12),
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 12),
                             child: EmptyState(
                               icon: Icons.restaurant_rounded,
-                              title: 'Nema zabilježenih hranjenja',
-                              subtitle: 'Čim nahraniš mačku (ručno ili preko rasporeda), pojaviće se ovdje.',
+                              title: AppStrings.t('no_feedings_logged'),
+                              subtitle: AppStrings.t('no_feedings_logged_sub'),
                             ),
                           );
                         }
@@ -257,7 +280,7 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
                             ),
                             title: Text('${catName(log['catId'])} • ${log['portionGrams']}g',
                                 style: const TextStyle(fontWeight: FontWeight.w600)),
-                            subtitle: Text('Pokretač: ${log['triggeredBy']}'),
+                            subtitle: Text('${AppStrings.t('triggered_by_prefix')}${log['triggeredBy']}'),
                             trailing: Text(
                               log['timestamp'] != null ? log['timestamp'].toString().substring(11, 16) : '',
                               style: const TextStyle(fontWeight: FontWeight.bold),
@@ -275,9 +298,9 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
                             children: [
                               EmptyState(
                                 icon: Icons.alarm_add_rounded,
-                                title: 'Nema rasporeda',
-                                subtitle: 'Zakaži automatsko hranjenje po danima u sedmici i tačnom vremenu.',
-                                actionLabel: 'Novi raspored',
+                                title: AppStrings.t('no_schedules'),
+                                subtitle: AppStrings.t('no_schedules_sub'),
+                                actionLabel: AppStrings.t('new_schedule'),
                                 onAction: () => openScheduleForm(),
                               ),
                             ],
@@ -297,7 +320,7 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
                                   ),
                                   title: Text('${catName(schedule['catId'])} • ${formatTime(schedule['time'])}',
                                       style: const TextStyle(fontWeight: FontWeight.w600)),
-                                  subtitle: Text('Količina: ${schedule['portionGrams']}g (${translateDays(schedule['daysOfWeek'] as String?)})'),
+                                  subtitle: Text('${AppStrings.t('amount_prefix')}${schedule['portionGrams']}g (${translateDays(schedule['daysOfWeek'] as String?)})'),
                                   trailing: IconButton(
                                     icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
                                     onPressed: () => deleteSchedule(schedule['id'] as int),
@@ -309,7 +332,7 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
                   ),
                 ],
               ),
-    );
+    ));
   }
 }
 
@@ -319,7 +342,9 @@ class _WeeklyFeedingChart extends StatelessWidget {
   final Map<DateTime, double> dailyTotals;
   const _WeeklyFeedingChart({required this.dailyTotals});
 
-  static const List<String> _dayLabels = ['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned'];
+  static const List<String> _dayLabelsBs = ['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned'];
+  static const List<String> _dayLabelsEn = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  List<String> get _dayLabels => AppStrings.locale.value == 'en' ? _dayLabelsEn : _dayLabelsBs;
 
   @override
   Widget build(BuildContext context) {
@@ -334,9 +359,9 @@ class _WeeklyFeedingChart extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.only(left: 10, bottom: 18),
-              child: Text('Poslednjih 7 dana', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            Padding(
+              padding: const EdgeInsets.only(left: 10, bottom: 18),
+              child: Text(AppStrings.t('last_7_days'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             ),
             SizedBox(
               height: 170,

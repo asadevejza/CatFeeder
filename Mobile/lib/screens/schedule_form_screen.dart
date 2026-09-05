@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../api_config.dart';
 import '../models/cat.dart';
 import '../theme/app_colors.dart';
+import '../localization/app_strings.dart';
 
 class ScheduleFormScreen extends StatefulWidget {
   final String baseUrl;
@@ -76,11 +77,11 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
 
   Future<void> save() async {
     if (selectedCatId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Izaberi mačku.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppStrings.t('choose_cat'))));
       return;
     }
     if (selectedDays.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Izaberi bar jedan dan u sedmici.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppStrings.t('choose_day'))));
       return;
     }
 
@@ -116,7 +117,7 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
       if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 204) {
         Navigator.pop(context, true);
       } else {
-        String message = 'Greška pri čuvanju rasporeda.';
+        String message = AppStrings.t('schedule_save_error');
         try {
           final decoded = json.decode(response.body);
           if (decoded is Map && decoded['error'] != null) message = decoded['error'].toString();
@@ -125,7 +126,7 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Greška pri povezivanju: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${AppStrings.t('connection_error_prefix')}$e')));
     } finally {
       if (mounted) setState(() => isSaving = false);
     }
@@ -133,21 +134,23 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(isEditMode ? 'Uredi raspored' : 'Novi raspored')),
+    return ValueListenableBuilder<String>(
+      valueListenable: AppStrings.locale,
+      builder: (context, _, __) => Scaffold(
+      appBar: AppBar(title: Text(isEditMode ? AppStrings.t('edit_schedule') : AppStrings.t('new_schedule'))),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Mačka', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              Text(AppStrings.t('cat_label'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               const SizedBox(height: 10),
               if (widget.cats.isEmpty)
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(color: AppColors.tint50, borderRadius: BorderRadius.circular(12)),
-                  child: const Text('Nemaš nijednu mačku — dodaj je prvo na ekranu za hranjenje.'),
+                  child: Text(AppStrings.t('no_cats_add_first')),
                 )
               else
                 Wrap(
@@ -171,7 +174,7 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
                 ),
 
               const SizedBox(height: 26),
-              const Text('Vrijeme hranjenja', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              Text(AppStrings.t('feeding_time'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               const SizedBox(height: 10),
               InkWell(
                 onTap: pickTime,
@@ -194,7 +197,7 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
               ),
 
               const SizedBox(height: 26),
-              const Text('Količina obroka', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              Text(AppStrings.t('portion_amount'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -218,7 +221,7 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
               ),
 
               const SizedBox(height: 26),
-              const Text('Dani u sedmici', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              Text(AppStrings.t('days_of_week'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
@@ -226,7 +229,7 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
                 children: _dayOptions.map((day) {
                   final selected = selectedDays.contains(day['en']);
                   return FilterChip(
-                    label: Text(day['bs']!),
+                    label: Text(AppStrings.locale.value == 'en' ? day['en']!.substring(0, 3) : day['bs']!),
                     selected: selected,
                     selectedColor: AppColors.primary,
                     labelStyle: TextStyle(color: selected ? Colors.white : Colors.black87, fontWeight: FontWeight.w600),
@@ -251,12 +254,12 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
                 onPressed: isSaving ? null : save,
                 child: isSaving
                     ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                    : Text(isEditMode ? 'Sačuvaj izmjene' : 'Dodaj raspored'),
+                    : Text(isEditMode ? AppStrings.t('save_changes') : AppStrings.t('add_schedule')),
               ),
             ],
           ),
         ),
       ),
-    );
+    ));
   }
 }

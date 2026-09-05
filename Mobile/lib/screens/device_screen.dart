@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../localization/app_strings.dart';
+import '../models/cat.dart';
+import '../services/profile_service.dart';
 import 'status_detail_screen.dart';
+import 'camera_screen.dart';
 
-class DeviceScreen extends StatelessWidget {
+class DeviceScreen extends StatefulWidget {
   final double foodLevel;
   final double? waterLevel;
   final double temp;
   final double humidity;
   final bool isLoading;
   final Future<void> Function() onRefresh;
+  final List<Cat> cats;
 
   const DeviceScreen({
     super.key,
@@ -19,7 +23,36 @@ class DeviceScreen extends StatelessWidget {
     required this.humidity,
     required this.isLoading,
     required this.onRefresh,
+    required this.cats,
   });
+
+  @override
+  State<DeviceScreen> createState() => _DeviceScreenState();
+}
+
+class _DeviceScreenState extends State<DeviceScreen> {
+  bool _isCameraPaired = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCameraState();
+  }
+
+  Future<void> _loadCameraState() async {
+    final paired = await ProfileService.isCameraPaired();
+    if (!mounted) return;
+    setState(() => _isCameraPaired = paired);
+  }
+
+  Future<void> _openCamera() async {
+    final catName = widget.cats.isNotEmpty ? widget.cats.first.name : AppStrings.t('feeder_name');
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => CameraScreen(catName: catName)),
+    );
+    _loadCameraState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,11 +61,11 @@ class DeviceScreen extends StatelessWidget {
       builder: (context, _, __) => Scaffold(
         backgroundColor: AppColors.background,
         body: SafeArea(
-          child: isLoading
+          child: widget.isLoading
               ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
               : RefreshIndicator(
                   color: AppColors.primary,
-                  onRefresh: onRefresh,
+                  onRefresh: widget.onRefresh,
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(18, 28, 18, 24),
                     children: [
@@ -42,12 +75,12 @@ class DeviceScreen extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder: (context) => StatusDetailScreen(
-                              foodLevel: foodLevel,
-                              waterLevel: waterLevel,
-                              temp: temp,
-                              humidity: humidity,
-                              isLoading: isLoading,
-                              onRefresh: onRefresh,
+                              foodLevel: widget.foodLevel,
+                              waterLevel: widget.waterLevel,
+                              temp: widget.temp,
+                              humidity: widget.humidity,
+                              isLoading: widget.isLoading,
+                              onRefresh: widget.onRefresh,
                             ),
                           ),
                         ),
@@ -96,20 +129,20 @@ class DeviceScreen extends StatelessWidget {
                                   Expanded(
                                     child: _MiniStat(
                                       label: AppStrings.t('food'),
-                                      value: '${foodLevel.toStringAsFixed(0)}%',
-                                      color: foodLevel < 20 ? AppColors.danger : Colors.amber.shade700,
+                                      value: '${widget.foodLevel.toStringAsFixed(0)}%',
+                                      color: widget.foodLevel < 20 ? AppColors.danger : Colors.amber.shade700,
                                     ),
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: _MiniStat(
                                       label: AppStrings.t('water'),
-                                      value: waterLevel != null ? '${waterLevel!.toStringAsFixed(0)}%' : '--',
-                                      color: (waterLevel != null && waterLevel! < 20) ? AppColors.danger : AppColors.primary,
+                                      value: widget.waterLevel != null ? '${widget.waterLevel!.toStringAsFixed(0)}%' : '--',
+                                      color: (widget.waterLevel != null && widget.waterLevel! < 20) ? AppColors.danger : AppColors.primary,
                                     ),
                                   ),
                                   const SizedBox(width: 10),
-                                  Expanded(child: _MiniStat(label: AppStrings.t('temperature'), value: '${temp.toStringAsFixed(0)}°C', color: Colors.redAccent)),
+                                  Expanded(child: _MiniStat(label: AppStrings.t('temperature'), value: '${widget.temp.toStringAsFixed(0)}°C', color: Colors.redAccent)),
                                 ],
                               ),
                               const SizedBox(height: 12),
@@ -126,36 +159,7 @@ class DeviceScreen extends StatelessWidget {
                       const SizedBox(height: 10),
                       InkWell(
                         borderRadius: BorderRadius.circular(20),
-                        onTap: () => showModalBottomSheet(
-                          context: context,
-                          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                          builder: (context) => SafeArea(
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 64,
-                                    height: 64,
-                                    decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: AppColors.primary, width: 1.6)),
-                                    child: const Icon(Icons.videocam_off_rounded, color: AppColors.primary, size: 30),
-                                  ),
-                                  const SizedBox(height: 18),
-                                  Text(AppStrings.t('camera_not_connected'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                                  const SizedBox(height: 10),
-                                  Text(AppStrings.t('camera_explain'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, color: AppColors.textMuted, height: 1.4)),
-                                  const SizedBox(height: 20),
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    style: TextButton.styleFrom(foregroundColor: AppColors.primary),
-                                    child: Text(AppStrings.t('understand')),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+                        onTap: _openCamera,
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -165,32 +169,45 @@ class DeviceScreen extends StatelessWidget {
                           ),
                           child: Row(
                             children: [
-                              // "Okvir" umjesto pune boje - jasno pokazuje da nije aktivno/povezano
+                              // Upareno: puna boja + kamera ikonica. Nije upareno: "okvir" - jasno pokazuje da nije aktivno/povezano.
                               Container(
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
+                                  color: _isCameraPaired ? AppColors.tint50 : null,
                                   borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: Colors.grey.shade300, width: 1.6),
+                                  border: _isCameraPaired ? null : Border.all(color: Colors.grey.shade300, width: 1.6),
                                 ),
-                                child: Icon(Icons.videocam_off_rounded, color: Colors.grey.shade500),
+                                child: Icon(
+                                  _isCameraPaired ? Icons.videocam_rounded : Icons.videocam_off_rounded,
+                                  color: _isCameraPaired ? AppColors.primary : Colors.grey.shade500,
+                                ),
                               ),
                               const SizedBox(width: 14),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(AppStrings.t('connect_camera'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textDark)),
+                                    Text(
+                                      _isCameraPaired ? AppStrings.t('camera_connected') : AppStrings.t('connect_camera'),
+                                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textDark),
+                                    ),
                                     const SizedBox(height: 3),
-                                    Text(AppStrings.t('connect_camera_sub'), style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                                    Text(
+                                      _isCameraPaired ? AppStrings.t('paired_online') : AppStrings.t('connect_camera_sub'),
+                                      style: TextStyle(fontSize: 11, color: _isCameraPaired ? Colors.green : AppColors.textMuted),
+                                    ),
                                   ],
                                 ),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                decoration: BoxDecoration(color: AppColors.tint50, borderRadius: BorderRadius.circular(100)),
-                                child: Text(AppStrings.t('coming_soon'), style: const TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w700)),
-                              ),
+                              if (!_isCameraPaired)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(color: AppColors.tint50, borderRadius: BorderRadius.circular(100)),
+                                  child: Text(AppStrings.t('not_connected'), style: const TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w700)),
+                                )
+                              else
+                                const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
                             ],
                           ),
                         ),

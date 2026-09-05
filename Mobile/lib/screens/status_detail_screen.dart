@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../localization/app_strings.dart';
 
 // Detaljan status hranilice - otvara se klikom na uređaj na "Uređaji" tabu.
 class StatusDetailScreen extends StatelessWidget {
@@ -22,8 +23,10 @@ class StatusDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Status hranilice')),
+    return ValueListenableBuilder<String>(
+      valueListenable: AppStrings.locale,
+      builder: (context, _, __) => Scaffold(
+      appBar: AppBar(title: Text(AppStrings.t('feeder_status_title'))),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -32,30 +35,30 @@ class StatusDetailScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(18.0),
                 children: [
                   _LevelCard(
-                    title: 'Nivo hrane u spremniku',
+                    title: AppStrings.t('food_level_title'),
                     level: foodLevel,
                     color: Colors.amber.shade700,
-                    lowWarningText: 'Vrijeme je da dosuješ hranu u spremnik',
+                    lowWarningText: AppStrings.t('food_low_warning'),
                   ),
                   const SizedBox(height: 16),
                   _LevelCard(
-                    title: 'Nivo vode u posudi',
+                    title: AppStrings.t('water_level_title'),
                     level: waterLevel,
                     color: AppColors.primary,
-                    lowWarningText: 'Vrijeme je da dosuješ vodu',
+                    lowWarningText: AppStrings.t('water_low_warning'),
                   ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      Expanded(child: _SensorCard(icon: Icons.thermostat_rounded, color: Colors.redAccent, label: 'Temperatura', value: '${temp.toStringAsFixed(1)}°C')),
+                      Expanded(child: _SensorCard(icon: Icons.thermostat_rounded, color: Colors.redAccent, label: AppStrings.t('temperature'), value: '${temp.toStringAsFixed(1)}°C')),
                       const SizedBox(width: 14),
-                      Expanded(child: _SensorCard(icon: Icons.water_drop_rounded, color: Colors.blue, label: 'Vlažnost zraka', value: '${humidity.toStringAsFixed(1)}%')),
+                      Expanded(child: _SensorCard(icon: Icons.water_drop_rounded, color: Colors.blue, label: AppStrings.t('humidity'), value: '${humidity.toStringAsFixed(1)}%')),
                     ],
                   ),
                 ],
               ),
             ),
-    );
+    ));
   }
 }
 
@@ -84,7 +87,7 @@ class _LevelCard extends StatelessWidget {
               const SizedBox(height: 14),
               Icon(Icons.sensors_off_rounded, color: Colors.grey.shade400, size: 40),
               const SizedBox(height: 8),
-              Text('Nema još podataka sa senzora', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+              Text(AppStrings.t('no_sensor_data'), style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
             ],
           ),
         ),
@@ -124,7 +127,7 @@ class _LevelCard extends StatelessWidget {
                     children: [
                       Text('${currentLevel.toStringAsFixed(0)}%',
                           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                      Text(isLow ? 'Ponestaje!' : 'U redu',
+                      Text(isLow ? AppStrings.t('running_low') : AppStrings.t('ok'),
                           style: TextStyle(
                             fontSize: 12,
                             color: isLow ? Colors.redAccent : Colors.green,

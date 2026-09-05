@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/cat.dart';
 import '../models/cat_profile.dart';
 import '../theme/app_colors.dart';
+import '../localization/app_strings.dart';
 
 class AddCatScreen extends StatefulWidget {
   final Future<bool> Function(String name, CatProfile profile) onSave;
@@ -37,7 +38,7 @@ class _AddCatScreenState extends State<AddCatScreen> {
     setState(() => _isSaving = true);
     final profile = CatProfile(
       gender: _gender,
-      breed: _breedController.text.trim().isEmpty ? 'Nepoznata rasa' : _breedController.text.trim(),
+      breed: _breedController.text.trim().isEmpty ? AppStrings.t('unknown_breed') : _breedController.text.trim(),
       ageYears: int.parse(_ageController.text.trim()),
       weightKg: double.parse(_weightController.text.trim().replaceAll(',', '.')),
     );
@@ -49,7 +50,7 @@ class _AddCatScreenState extends State<AddCatScreen> {
     if (ok) {
       Navigator.pop(context);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEditMode ? 'Nije uspjelo čuvanje izmjena.' : 'Nije uspjelo dodavanje mačke.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEditMode ? AppStrings.t('save_changes_failed') : AppStrings.t('add_cat_failed'))));
     }
   }
 
@@ -58,11 +59,11 @@ class _AddCatScreenState extends State<AddCatScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Obrisati ${widget.existingCat!.name}?'),
-        content: const Text('Ovo će trajno obrisati i historiju hranjenja i rasporede. Ne može se poništiti.'),
+        title: Text('${AppStrings.t('delete_cat_q')} ${widget.existingCat!.name}?'),
+        content: Text(AppStrings.t('delete_cat_warning')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Otkaži')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Obriši', style: TextStyle(color: Colors.redAccent))),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(AppStrings.t('cancel'))),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(AppStrings.t('delete'), style: const TextStyle(color: Colors.redAccent))),
         ],
       ),
     );
@@ -74,7 +75,7 @@ class _AddCatScreenState extends State<AddCatScreen> {
     if (ok) {
       Navigator.pop(context);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Brisanje nije uspjelo.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppStrings.t('delete_failed'))));
     }
   }
 
@@ -89,62 +90,65 @@ class _AddCatScreenState extends State<AddCatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(isEditMode ? 'Uredi profil' : 'Dodaj mačku')),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            const Text('Ime mačke', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-            const SizedBox(height: 8),
-            _field(_nameController, 'npr. Bella'),
-            const SizedBox(height: 18),
-            const Text('Spol', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-            const SizedBox(height: 8),
-            Row(children: [
-              Expanded(child: _genderChip('Mužjak', Icons.male_rounded)),
-              const SizedBox(width: 12),
-              Expanded(child: _genderChip('Ženka', Icons.female_rounded)),
-            ]),
-            const SizedBox(height: 18),
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('Godine', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                  const SizedBox(height: 8),
-                  _field(_ageController, '2', keyboardType: TextInputType.number),
-                ]),
+    return ValueListenableBuilder<String>(
+      valueListenable: AppStrings.locale,
+      builder: (context, _, __) => Scaffold(
+        appBar: AppBar(title: Text(isEditMode ? AppStrings.t('edit_profile') : AppStrings.t('add_cat_title'))),
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              Text(AppStrings.t('cat_name_label'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              const SizedBox(height: 8),
+              _field(_nameController, AppStrings.t('eg_bella')),
+              const SizedBox(height: 18),
+              Text(AppStrings.t('gender_label'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: _genderChip('Mužjak', AppStrings.t('male'), Icons.male_rounded)),
+                const SizedBox(width: 12),
+                Expanded(child: _genderChip('Ženka', AppStrings.t('female'), Icons.female_rounded)),
+              ]),
+              const SizedBox(height: 18),
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(AppStrings.t('age_label'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    _field(_ageController, '2', keyboardType: TextInputType.number),
+                  ]),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(AppStrings.t('weight_kg_label'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    _field(_weightController, '4.5', keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+                  ]),
+                ),
+              ]),
+              const SizedBox(height: 18),
+              Text(AppStrings.t('breed_label'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              const SizedBox(height: 8),
+              _field(_breedController, AppStrings.t('eg_domestic_shorthair')),
+              const SizedBox(height: 28),
+              ElevatedButton(
+                onPressed: _isSaving ? null : _save,
+                child: _isSaving
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
+                    : Text(isEditMode ? AppStrings.t('save_changes') : AppStrings.t('save')),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('Težina (kg)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                  const SizedBox(height: 8),
-                  _field(_weightController, '4.5', keyboardType: const TextInputType.numberWithOptions(decimal: true)),
-                ]),
-              ),
-            ]),
-            const SizedBox(height: 18),
-            const Text('Rasa', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-            const SizedBox(height: 8),
-            _field(_breedController, 'Domaća kratkodlaka'),
-            const SizedBox(height: 28),
-            ElevatedButton(
-              onPressed: _isSaving ? null : _save,
-              child: _isSaving
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
-                  : Text(isEditMode ? 'Sačuvaj izmjene' : 'Sačuvaj'),
-            ),
-            if (isEditMode && widget.onDelete != null) ...[
-              const SizedBox(height: 14),
-              TextButton(
-                onPressed: _isDeleting ? null : _delete,
-                child: _isDeleting
-                    ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Obriši mačku', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)),
-              ),
+              if (isEditMode && widget.onDelete != null) ...[
+                const SizedBox(height: 14),
+                TextButton(
+                  onPressed: _isDeleting ? null : _delete,
+                  child: _isDeleting
+                      ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : Text(AppStrings.t('delete_cat_button'), style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -166,10 +170,12 @@ class _AddCatScreenState extends State<AddCatScreen> {
     );
   }
 
-  Widget _genderChip(String label, IconData icon) {
-    final selected = _gender == label;
+  // [value] je kanonska (bosanska) vrijednost koja se čuva u profilu;
+  // [label] je prevedeni tekst koji se prikazuje korisniku.
+  Widget _genderChip(String value, String label, IconData icon) {
+    final selected = _gender == value;
     return InkWell(
-      onTap: () => setState(() => _gender = label),
+      onTap: () => setState(() => _gender = value),
       borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),

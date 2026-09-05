@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../api_config.dart';
 import '../theme/app_colors.dart';
+import '../localization/app_strings.dart';
 
 class ServerAddressScreen extends StatefulWidget {
   final String currentBaseUrl;
@@ -53,14 +54,14 @@ class _ServerAddressScreenState extends State<ServerAddressScreen> {
       setState(() {
         testResultSuccess = response.statusCode == 200;
         testResultMessage = response.statusCode == 200
-            ? 'Konekcija uspješna! Server odgovara.'
-            : 'Server je odgovorio, ali sa greškom (${response.statusCode}).';
+            ? AppStrings.t('connection_success')
+            : '${AppStrings.t('connection_error_status')} (${response.statusCode}).';
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         testResultSuccess = false;
-        testResultMessage = 'Ne mogu da se povežem: $e';
+        testResultMessage = '${AppStrings.t('connection_failed_prefix')}$e';
       });
     } finally {
       if (mounted) setState(() => isTesting = false);
@@ -70,7 +71,7 @@ class _ServerAddressScreenState extends State<ServerAddressScreen> {
   Future<void> save() async {
     if (_cleanedUrl.isEmpty || !_cleanedUrl.startsWith('http')) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Adresa mora početi sa http:// ili https://')),
+        SnackBar(content: Text(AppStrings.t('server_url_invalid'))),
       );
       return;
     }
@@ -79,25 +80,27 @@ class _ServerAddressScreenState extends State<ServerAddressScreen> {
     if (!mounted) return;
     setState(() => isSaving = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Adresa sačuvana i podaci osvježeni. 🐾')),
+      SnackBar(content: Text(AppStrings.t('address_saved'))),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Adresa servera')),
+    return ValueListenableBuilder<String>(
+      valueListenable: AppStrings.locale,
+      builder: (context, _, __) => Scaffold(
+      appBar: AppBar(title: Text(AppStrings.t('server_address'))),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Adresa backend servera', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+              Text(AppStrings.t('backend_address_title'), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
               const SizedBox(height: 6),
-              const Text(
-                'Ovdje app zna gdje da traži tvoj .NET backend.',
-                style: TextStyle(color: Colors.black54, fontSize: 13),
+              Text(
+                AppStrings.t('backend_address_sub'),
+                style: const TextStyle(color: Colors.black54, fontSize: 13),
               ),
               const SizedBox(height: 14),
               TextField(
@@ -135,7 +138,7 @@ class _ServerAddressScreenState extends State<ServerAddressScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
                             )
                           : const Icon(Icons.wifi_tethering_rounded, color: AppColors.primary),
-                      label: const Text('Testiraj konekciju'),
+                      label: Text(AppStrings.t('test_connection')),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primary,
                         side: const BorderSide(color: AppColors.primary),
@@ -183,7 +186,7 @@ class _ServerAddressScreenState extends State<ServerAddressScreen> {
                 onPressed: isSaving ? null : save,
                 child: isSaving
                     ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                    : const Text('Sačuvaj'),
+                    : Text(AppStrings.t('save')),
               ),
 
               const SizedBox(height: 20),
@@ -191,7 +194,7 @@ class _ServerAddressScreenState extends State<ServerAddressScreen> {
                 child: TextButton.icon(
                   onPressed: () => setState(() => showHelp = !showHelp),
                   icon: Icon(showHelp ? Icons.expand_less_rounded : Icons.help_outline_rounded, size: 18),
-                  label: Text(showHelp ? 'Sakrij pomoć' : 'Koju adresu staviti?'),
+                  label: Text(showHelp ? AppStrings.t('hide_help') : AppStrings.t('which_address')),
                   style: TextButton.styleFrom(foregroundColor: Colors.black54),
                 ),
               ),
@@ -201,17 +204,17 @@ class _ServerAddressScreenState extends State<ServerAddressScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(color: AppColors.tint50, borderRadius: BorderRadius.circular(14)),
-                  child: const Column(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('• Android Emulator (testiranje na računaru):', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                      Text('  http://10.0.2.2:5103/api', style: TextStyle(fontFamily: 'monospace', fontSize: 13)),
-                      SizedBox(height: 10),
-                      Text('• Pravi telefon, ista WiFi mreža kao računar:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                      Text('  http://[LAN IP računara]:5103/api', style: TextStyle(fontFamily: 'monospace', fontSize: 13)),
-                      SizedBox(height: 4),
-                      Text('  (LAN IP nađeš sa "ipconfig" u terminalu, na primjer 192.168.1.50)',
-                          style: TextStyle(fontSize: 12, color: Colors.black54)),
+                      Text(AppStrings.t('help_emulator_label'), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      const Text('  http://10.0.2.2:5103/api', style: TextStyle(fontFamily: 'monospace', fontSize: 13)),
+                      const SizedBox(height: 10),
+                      Text(AppStrings.t('help_real_phone_label'), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      const Text('  http://[LAN IP računara]:5103/api', style: TextStyle(fontFamily: 'monospace', fontSize: 13)),
+                      const SizedBox(height: 4),
+                      Text('  ${AppStrings.t('help_lan_ip_note')}',
+                          style: const TextStyle(fontSize: 12, color: Colors.black54)),
                     ],
                 ),
               ),
@@ -220,6 +223,6 @@ class _ServerAddressScreenState extends State<ServerAddressScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 }

@@ -8,11 +8,18 @@ import '../services/profile_service.dart';
 import 'add_cat_screen.dart';
 import 'trend_screen.dart';
 import '../theme/app_colors.dart';
+import '../localization/app_strings.dart';
 
-const List<String> _mjeseci = [
+const List<String> _mjeseciBs = [
   'jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'avg', 'sep', 'okt', 'nov', 'dec',
 ];
-const List<String> _dayLetters = ['N', 'P', 'U', 'S', 'Č', 'P', 'S']; // 0=Sunday
+const List<String> _mjeseciEn = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+List<String> get _mjeseci => AppStrings.locale.value == 'en' ? _mjeseciEn : _mjeseciBs;
+const List<String> _dayLettersBs = ['N', 'P', 'U', 'S', 'Č', 'P', 'S']; // 0=Sunday
+const List<String> _dayLettersEn = ['S', 'M', 'T', 'W', 'T', 'F', 'S']; // 0=Sunday
+List<String> get _dayLetters => AppStrings.locale.value == 'en' ? _dayLettersEn : _dayLettersBs;
 
 class CareScreen extends StatefulWidget {
   final List<Cat> cats;
@@ -21,6 +28,8 @@ class CareScreen extends StatefulWidget {
   final Map<int, Map<String, dynamic>> feedingSummaryByCat;
   final double? waterLevel;
   final Future<bool> Function(String name, CatProfile profile) onAddCat;
+  final Future<bool> Function(int catId, String name, CatProfile profile) onUpdateCat;
+  final Future<bool> Function(int catId, int portionGrams) onFeedNow;
   final String baseUrl;
 
   const CareScreen({
@@ -31,6 +40,8 @@ class CareScreen extends StatefulWidget {
     required this.feedingSummaryByCat,
     required this.waterLevel,
     required this.onAddCat,
+    required this.onUpdateCat,
+    required this.onFeedNow,
     required this.baseUrl,
   });
 
@@ -83,48 +94,54 @@ class _CareScreenState extends State<CareScreen> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: TabBar(
-          controller: _tabController,
-          labelColor: AppColors.textDark,
-          unselectedLabelColor: Colors.black38,
-          indicatorColor: AppColors.primary,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-          tabs: const [Tab(text: 'Dashboard'), Tab(text: 'Care List')],
+    return ValueListenableBuilder<String>(
+      valueListenable: AppStrings.locale,
+      builder: (context, _, __) => Scaffold(
+        appBar: AppBar(
+          title: TabBar(
+            controller: _tabController,
+            labelColor: AppColors.textDark,
+            unselectedLabelColor: Colors.black38,
+            indicatorColor: AppColors.primary,
+            labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+            tabs: [Tab(text: AppStrings.t('dashboard')), Tab(text: AppStrings.t('care_list'))],
+          ),
         ),
-      ),
-      body: Column(
-        children: [
-          _CatSelectorRow(
-            cats: widget.cats,
-            selectedCatId: widget.selectedCatId,
-            avatarPaths: _avatarPaths,
-            onSelectCat: widget.onSelectCat,
-            onAddCat: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => AddCatScreen(onSave: widget.onAddCat)),
-              );
-              _loadProfiles();
-            },
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _DashboardTab(
-                  cat: _selectedCat,
-                  profile: _selectedCat == null ? null : _catProfiles[_selectedCat!.id],
-                  summary: _selectedCat == null ? null : widget.feedingSummaryByCat[_selectedCat!.id],
-                  waterLevel: widget.waterLevel,
-                  baseUrl: widget.baseUrl,
-                ),
-                _CareListTab(cat: _selectedCat),
-              ],
+        body: Column(
+          children: [
+            _CatSelectorRow(
+              cats: widget.cats,
+              selectedCatId: widget.selectedCatId,
+              avatarPaths: _avatarPaths,
+              onSelectCat: widget.onSelectCat,
+              onAddCat: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => AddCatScreen(onSave: widget.onAddCat)),
+                );
+                _loadProfiles();
+              },
             ),
-          ),
-        ],
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _DashboardTab(
+                    cat: _selectedCat,
+                    profile: _selectedCat == null ? null : _catProfiles[_selectedCat!.id],
+                    summary: _selectedCat == null ? null : widget.feedingSummaryByCat[_selectedCat!.id],
+                    waterLevel: widget.waterLevel,
+                    baseUrl: widget.baseUrl,
+                    onUpdateCat: widget.onUpdateCat,
+                    onFeedNow: widget.onFeedNow,
+                    onProfileChanged: _loadProfiles,
+                  ),
+                  _CareListTab(cat: _selectedCat),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -202,7 +219,7 @@ class _CatSelectorRow extends StatelessWidget {
                   child: Icon(Icons.add_rounded, color: Colors.grey.shade500),
                 ),
                 const SizedBox(height: 6),
-                Text('Dodaj', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                Text(AppStrings.t('add'), style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
               ],
             ),
           ),
@@ -219,6 +236,9 @@ class _DashboardTab extends StatelessWidget {
   final Map<String, dynamic>? summary;
   final double? waterLevel;
   final String baseUrl;
+  final Future<bool> Function(int catId, String name, CatProfile profile) onUpdateCat;
+  final Future<bool> Function(int catId, int portionGrams) onFeedNow;
+  final VoidCallback onProfileChanged;
 
   const _DashboardTab({
     required this.cat,
@@ -226,7 +246,98 @@ class _DashboardTab extends StatelessWidget {
     required this.summary,
     required this.waterLevel,
     required this.baseUrl,
+    required this.onUpdateCat,
+    required this.onFeedNow,
+    required this.onProfileChanged,
   });
+
+  Future<void> _openEditProfile(BuildContext context) async {
+    if (cat == null) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddCatScreen(
+          onSave: (name, profile) async => false, // se ne koristi u edit modu
+          existingCat: cat,
+          existingProfile: profile,
+          onUpdate: onUpdateCat,
+        ),
+      ),
+    );
+    onProfileChanged();
+  }
+
+  Future<void> _openFeedSheet(BuildContext context) async {
+    if (cat == null) return;
+    int selectedPortion = 50;
+    bool isFeeding = false;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + MediaQuery.of(sheetContext).viewInsets.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('${AppStrings.t('feed_dialog_title')} — ${cat!.name}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 18),
+              Text(AppStrings.t('portion_amount'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.black54)),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [50, 100, 150].map((grams) {
+                  final selected = selectedPortion == grams;
+                  return GestureDetector(
+                    onTap: () => setSheetState(() => selectedPortion = grams),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: selected ? AppColors.primary : Colors.white,
+                        borderRadius: BorderRadius.circular(100),
+                        border: Border.all(color: selected ? AppColors.primary : AppColors.tint100, width: 2),
+                      ),
+                      child: Text('${grams}g', style: TextStyle(color: selected ? Colors.white : AppColors.textDark, fontWeight: FontWeight.w700)),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: isFeeding
+                      ? null
+                      : () async {
+                          setSheetState(() => isFeeding = true);
+                          final ok = await onFeedNow(cat!.id, selectedPortion);
+                          if (!sheetContext.mounted) return;
+                          Navigator.pop(sheetContext);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                ok
+                                    ? '${AppStrings.t('fed_success_prefix')}$selectedPortion${AppStrings.t('fed_success_for')}${cat!.name}! 🐾'
+                                    : AppStrings.t('feed_failed'),
+                              ),
+                            ),
+                          );
+                        },
+                  child: isFeeding
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
+                      : Text(AppStrings.t('feed_button')),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   void _openTrend(BuildContext context, TrendType type) {
     if (cat == null) return;
@@ -247,7 +358,7 @@ class _DashboardTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (cat == null) {
-      return const Center(child: Text('Dodaj svoju prvu mačku da vidiš dashboard.'));
+      return Center(child: Text(AppStrings.t('no_cat_dashboard')));
     }
 
     final todayGrams = (summary?['todayGrams'] as int?) ?? 0;
@@ -260,19 +371,26 @@ class _DashboardTab extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Pregled', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            Text(AppStrings.t('overview'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             TextButton(
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Uskoro dostupno.')),
-              ),
-              child: const Text('Uredi'),
+              onPressed: () => _openEditProfile(context),
+              child: Text(AppStrings.t('edit')),
             ),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () => _openFeedSheet(context),
+            icon: const Icon(Icons.restaurant_rounded, size: 18),
+            label: Text(AppStrings.t('feed_now')),
+          ),
+        ),
+        const SizedBox(height: 10),
         _OverviewCard(
-          title: 'Težina',
-          trailing: '7-dnevni trend',
+          title: AppStrings.t('weight'),
+          trailing: AppStrings.t('trend_7d'),
           onTrailingTap: () => _openTrend(context, TrendType.weight),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -290,16 +408,16 @@ class _DashboardTab extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         _OverviewCard(
-          title: 'Unos hrane',
-          trailing: '7-dnevni trend',
+          title: AppStrings.t('food_intake'),
+          trailing: AppStrings.t('trend_7d'),
           onTrailingTap: () => _openTrend(context, TrendType.food),
           child: Row(
             children: [
               Expanded(
-                child: _StatColumn(label: 'Obroci', value: '$mealCount puta'),
+                child: _StatColumn(label: AppStrings.t('meals'), value: '$mealCount ${AppStrings.t('times_suffix')}'),
               ),
               Expanded(
-                child: _StatColumn(label: 'Ukupno', value: '$todayGrams/$dailyGoalGrams g'),
+                child: _StatColumn(label: AppStrings.t('total'), value: '$todayGrams/$dailyGoalGrams g'),
               ),
               _MiniSparkline(color: Colors.orange),
             ],
@@ -307,18 +425,18 @@ class _DashboardTab extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         _OverviewCard(
-          title: 'Nivo vode',
-          trailing: '7-dnevni trend',
+          title: AppStrings.t('water_level'),
+          trailing: AppStrings.t('trend_7d'),
           onTrailingTap: () => _openTrend(context, TrendType.water),
           child: Row(
             children: [
               Expanded(
-                child: _StatColumn(label: 'Trenutno', value: waterLevel == null ? '--' : '${waterLevel!.toStringAsFixed(0)}%'),
+                child: _StatColumn(label: AppStrings.t('current'), value: waterLevel == null ? '--' : '${waterLevel!.toStringAsFixed(0)}%'),
               ),
               Expanded(
                 child: _StatColumn(
-                  label: 'Status',
-                  value: (waterLevel ?? 100) < 20 ? 'Nisko' : 'U redu',
+                  label: AppStrings.t('status'),
+                  value: (waterLevel ?? 100) < 20 ? AppStrings.t('low') : AppStrings.t('ok'),
                   valueColor: (waterLevel ?? 100) < 20 ? AppColors.danger : Colors.green,
                 ),
               ),
@@ -329,13 +447,13 @@ class _DashboardTab extends StatelessWidget {
         const SizedBox(height: 18),
         if (profile != null) ...[
           const SizedBox(height: 18),
-          Text('O mački', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.grey.shade800)),
+          Text(AppStrings.t('about_cat'), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.grey.shade800)),
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(child: _InfoChip(icon: Icons.cake_rounded, label: '${profile!.ageYears} god.')),
+              Expanded(child: _InfoChip(icon: Icons.cake_rounded, label: '${profile!.ageYears} ${AppStrings.t('years_suffix')}')),
               const SizedBox(width: 10),
-              Expanded(child: _InfoChip(icon: profile!.gender == 'Ženka' ? Icons.female_rounded : Icons.male_rounded, label: profile!.gender)),
+              Expanded(child: _InfoChip(icon: profile!.gender == 'Ženka' ? Icons.female_rounded : Icons.male_rounded, label: AppStrings.t(profile!.gender == 'Ženka' ? 'female' : 'male'))),
             ],
           ),
           const SizedBox(height: 10),
@@ -525,11 +643,11 @@ class _CareListTabState extends State<_CareListTab> {
           content: TextField(
             controller: controller,
             autofocus: true,
-            decoration: const InputDecoration(hintText: 'npr. 1/2 šolje'),
+            decoration: InputDecoration(hintText: AppStrings.t('eg_half_cup')),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Otkaži')),
-            TextButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Sačuvaj')),
+            TextButton(onPressed: () => Navigator.pop(context), child: Text(AppStrings.t('cancel'))),
+            TextButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: Text(AppStrings.t('save'))),
           ],
         ),
       );
@@ -558,11 +676,11 @@ class _CareListTabState extends State<_CareListTab> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 18, 20, 6),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Dodaj zadatak', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                child: Text(AppStrings.t('add_task'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
               ),
             ),
             ...careTaskTemplates.map((t) => ListTile(
@@ -590,7 +708,7 @@ class _CareListTabState extends State<_CareListTab> {
   @override
   Widget build(BuildContext context) {
     if (widget.cat == null) {
-      return const Center(child: Text('Dodaj svoju prvu mačku da vidiš listu njege.'));
+      return Center(child: Text(AppStrings.t('no_cat_care_list')));
     }
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -611,7 +729,7 @@ class _CareListTabState extends State<_CareListTab> {
                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                 Row(
                   children: [
-                    const Text('Dnevni napredak ', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                    Text('${AppStrings.t('daily_progress')} ', style: const TextStyle(fontSize: 12, color: Colors.black54)),
                     Text('${(progress * 100).round()}%',
                         style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.primary)),
                   ],
@@ -656,7 +774,7 @@ class _CareListTabState extends State<_CareListTab> {
               }).toList(),
             ),
             const SizedBox(height: 22),
-            const Text('To-do', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+            Text(AppStrings.t('todo'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
             const SizedBox(height: 12),
             ..._items.map((item) {
               return Dismissible(

@@ -143,6 +143,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       for (final cat in cats) {
         DateTime? lastFed;
         int todayGrams = 0;
+        int mealCount = 0;
 
         for (final log in allLogs) {
           if (log['catId'] != cat.id) continue;
@@ -158,16 +159,37 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           if (lastFed == null || ts.isAfter(lastFed)) lastFed = ts;
           if (ts.year == today.year && ts.month == today.month && ts.day == today.day) {
             todayGrams += (log['portionGrams'] as num?)?.toInt() ?? 0;
+            mealCount++;
           }
         }
 
-        summary[cat.id] = {'lastFed': lastFed, 'todayGrams': todayGrams};
+        summary[cat.id] = {'lastFed': lastFed, 'todayGrams': todayGrams, 'mealCount': mealCount};
       }
 
       if (!mounted) return;
       setState(() => feedingSummaryByCat = summary);
     } catch (_) {
       // Tiho ne uspije
+    }
+  }
+
+  Future<bool> feedCatNow(int catId, int portionGrams) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/feedinglogs'),
+        headers: apiHeaders(withJsonBody: true),
+        body: json.encode({
+          'catId': catId,
+          'portionGrams': portionGrams,
+          'triggeredBy': 'Manual (App)',
+        }),
+      );
+      if (response.statusCode != 200 && response.statusCode != 201) return false;
+      await fetchFeedingSummary();
+      await fetchSensorData();
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -259,6 +281,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         temp: temp,
         humidity: humidity,
         isLoading: isLoadingDashboard,
+        cats: cats,
         onRefresh: () async {
           await fetchSensorData();
           await fetchFeedingSummary();
@@ -274,6 +297,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         onSelectCat: selectCat,
         feedingSummaryByCat: feedingSummaryByCat,
         onAddCat: addCat,
+        onUpdateCat: updateCat,
+        onFeedNow: feedCatNow,
       ),
 
       // 3. Services Tab
@@ -294,46 +319,49 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ),
     ];
 
-    return Scaffold(
-      body: screens[_selectedIndex],
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, -3),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          child: BottomNavigationBar(
-            currentIndex: _selectedIndex,
-            onTap: (index) => setState(() => _selectedIndex = index),
-            selectedItemColor: AppColors.primary,
-            unselectedItemColor: Colors.grey,
-            backgroundColor: Colors.white,
-            type: BottomNavigationBarType.fixed,
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.devices_rounded),
-                label: 'Device',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.favorite_rounded),
-                label: 'Care',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.grid_view_rounded),
-                label: 'Services',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person_rounded),
-                label: 'Me',
+    return ValueListenableBuilder<String>(
+      valueListenable: AppStrings.locale,
+      builder: (context, _, __) => Scaffold(
+        body: screens[_selectedIndex],
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 12,
+                offset: const Offset(0, -3),
               ),
             ],
+          ),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            child: BottomNavigationBar(
+              currentIndex: _selectedIndex,
+              onTap: (index) => setState(() => _selectedIndex = index),
+              selectedItemColor: AppColors.primary,
+              unselectedItemColor: Colors.grey,
+              backgroundColor: Colors.white,
+              type: BottomNavigationBarType.fixed,
+              items: [
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.devices_rounded),
+                  label: AppStrings.t('device'),
+                ),
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.favorite_rounded),
+                  label: AppStrings.t('care'),
+                ),
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.grid_view_rounded),
+                  label: AppStrings.t('services'),
+                ),
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.person_rounded),
+                  label: AppStrings.t('me'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
