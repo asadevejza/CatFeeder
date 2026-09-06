@@ -16,7 +16,7 @@ class AppColors {
   static const Color goldTint = Color(0xFFF0EAD8);
   static const Color danger =Color.fromARGB(255, 231, 70, 6);
   
-  static const Color background = Color(0xFFF5F5F5);
+  static const Color background = Color(0xFFF1F4E9);
   static const Color card = Colors.white;
   static const Color textDark = Color(0xFF1A1A1A);
   static const Color textMuted = Color(0xFF9B9B9B);

@@ -38,7 +38,8 @@ class CatFeederApp extends StatelessWidget {
         ).copyWith(secondary: AppColors.gold),
         scaffoldBackgroundColor: AppColors.background,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
           foregroundColor: AppColors.textDark,
           elevation: 0,
           centerTitle: true,
@@ -70,7 +71,8 @@ class CatFeederApp extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
             textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-            elevation: 0,
+            elevation: 2,
+            shadowColor: AppColors.primary.withOpacity(0.4),
           ),
         ),
         textButtonTheme: TextButtonThemeData(

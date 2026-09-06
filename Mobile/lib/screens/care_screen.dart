@@ -118,39 +118,49 @@ class _CareScreenState extends State<CareScreen> with SingleTickerProviderStateM
             tabs: [Tab(text: AppStrings.t('dashboard')), Tab(text: AppStrings.t('care_list'))],
           ),
         ),
-        body: Column(
-          children: [
-            _CatSelectorRow(
-              cats: widget.cats,
-              selectedCatId: widget.selectedCatId,
-              avatarPaths: _avatarPaths,
-              onSelectCat: widget.onSelectCat,
-              onAddCat: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => AddCatScreen(onSave: widget.onAddCat)),
-                );
-                _loadProfiles();
-              },
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: [0.0, 0.25],
+              colors: [AppColors.tint100, AppColors.background],
             ),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _DashboardTab(
-                    cat: _selectedCat,
-                    profile: _selectedCat == null ? null : _catProfiles[_selectedCat!.id],
-                    summary: _selectedCat == null ? null : widget.feedingSummaryByCat[_selectedCat!.id],
-                    baseUrl: widget.baseUrl,
-                    onUpdateCat: widget.onUpdateCat,
-                    onFeedNow: widget.onFeedNow,
-                    onProfileChanged: _loadProfiles,
-                  ),
-                  _CareListTab(cat: _selectedCat),
-                ],
+          ),
+          child: Column(
+            children: [
+              _CatSelectorRow(
+                cats: widget.cats,
+                selectedCatId: widget.selectedCatId,
+                avatarPaths: _avatarPaths,
+                onSelectCat: widget.onSelectCat,
+                onAddCat: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => AddCatScreen(onSave: widget.onAddCat)),
+                  );
+                  _loadProfiles();
+                },
               ),
-            ),
-          ],
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _DashboardTab(
+                      cat: _selectedCat,
+                      profile: _selectedCat == null ? null : _catProfiles[_selectedCat!.id],
+                      summary: _selectedCat == null ? null : widget.feedingSummaryByCat[_selectedCat!.id],
+                      baseUrl: widget.baseUrl,
+                      onUpdateCat: widget.onUpdateCat,
+                      onFeedNow: widget.onFeedNow,
+                      onProfileChanged: _loadProfiles,
+                    ),
+                    _CareListTab(cat: _selectedCat),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

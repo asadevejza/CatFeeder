@@ -27,7 +27,7 @@ class EmptyState extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 14, offset: const Offset(0, 5))],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -37,8 +37,12 @@ class EmptyState extends StatelessWidget {
             child: Container(
               width: 72,
               height: 72,
-              decoration: BoxDecoration(color: AppColors.tint50, shape: BoxShape.circle),
-              child: Icon(icon, color: AppColors.primary, size: 34),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [AppColors.primaryLight, AppColors.primary], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.25), blurRadius: 14, offset: const Offset(0, 6))],
+              ),
+              child: Icon(icon, color: Colors.white, size: 32),
             ),
           ),
           const SizedBox(height: 20),
@@ -51,12 +55,13 @@ class EmptyState extends StatelessWidget {
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: 22),
-            TextButton(
+            ElevatedButton(
               onPressed: onAction,
-              style: TextButton.styleFrom(
-                backgroundColor: AppColors.tint50,
-                foregroundColor: AppColors.primaryDark,
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 13),
+                elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
               ),
               child: Text(actionLabel!, style: const TextStyle(fontWeight: FontWeight.w700)),

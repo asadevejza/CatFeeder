@@ -59,15 +59,24 @@ class _DeviceScreenState extends State<DeviceScreen> {
     return ValueListenableBuilder<String>(
       valueListenable: AppStrings.locale,
       builder: (context, _, __) => Scaffold(
-        backgroundColor: AppColors.background,
-        body: SafeArea(
-          child: widget.isLoading
-              ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-              : RefreshIndicator(
-                  color: AppColors.primary,
-                  onRefresh: widget.onRefresh,
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(18, 28, 18, 24),
+        extendBodyBehindAppBar: false,
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: [0.0, 0.35],
+              colors: [AppColors.tint100, AppColors.background],
+            ),
+          ),
+          child: SafeArea(
+            child: widget.isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                : RefreshIndicator(
+                    color: AppColors.primary,
+                    onRefresh: widget.onRefresh,
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(18, 28, 18, 24),
                     children: [
                       InkWell(
                         borderRadius: BorderRadius.circular(24),
@@ -237,6 +246,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
                     ],
                   ),
                 ),
+          ),
         ),
       ),
     );

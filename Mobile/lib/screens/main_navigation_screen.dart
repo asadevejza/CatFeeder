@@ -343,21 +343,26 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               unselectedItemColor: Colors.grey,
               backgroundColor: Colors.white,
               type: BottomNavigationBarType.fixed,
+              selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
               items: [
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.devices_rounded),
+                  activeIcon: _ActiveNavIcon(icon: Icons.devices_rounded),
                   label: AppStrings.t('device'),
                 ),
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.favorite_rounded),
+                  activeIcon: _ActiveNavIcon(icon: Icons.favorite_rounded),
                   label: AppStrings.t('care'),
                 ),
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.grid_view_rounded),
+                  activeIcon: _ActiveNavIcon(icon: Icons.grid_view_rounded),
                   label: AppStrings.t('services'),
                 ),
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.person_rounded),
+                  activeIcon: _ActiveNavIcon(icon: Icons.person_rounded),
                   label: AppStrings.t('me'),
                 ),
               ],
@@ -365,6 +370,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ActiveNavIcon extends StatelessWidget {
+  final IconData icon;
+  const _ActiveNavIcon({required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(color: AppColors.tint50, borderRadius: BorderRadius.circular(100)),
+      child: Icon(icon, color: AppColors.primary),
     );
   }
 }
