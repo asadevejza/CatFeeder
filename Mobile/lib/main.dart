@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'services/settings_service.dart';
 import 'services/notification_service.dart';
@@ -32,11 +33,18 @@ class CatFeederApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
+        fontFamily: GoogleFonts.nunito().fontFamily,
         colorScheme: ColorScheme.fromSeed(
           seedColor: AppColors.primary,
           brightness: Brightness.light,
         ).copyWith(secondary: AppColors.gold),
         scaffoldBackgroundColor: AppColors.background,
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          },
+        ),
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,

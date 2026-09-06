@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/cat.dart';
 import '../models/cat_profile.dart';
 import '../services/care_list_service.dart';
@@ -197,7 +198,10 @@ class _CatSelectorRow extends StatelessWidget {
             return Padding(
               padding: const EdgeInsets.only(right: 16),
               child: GestureDetector(
-                onTap: () => onSelectCat(cat.id),
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  onSelectCat(cat.id);
+                },
                 child: Column(
                   children: [
                     Container(
@@ -319,7 +323,10 @@ class _DashboardTab extends StatelessWidget {
                 children: [50, 100, 150].map((grams) {
                   final selected = selectedPortion == grams;
                   return GestureDetector(
-                    onTap: () => setSheetState(() => selectedPortion = grams),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setSheetState(() => selectedPortion = grams);
+                    },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
                       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
@@ -343,6 +350,11 @@ class _DashboardTab extends StatelessWidget {
                           setSheetState(() => isFeeding = true);
                           final ok = await onFeedNow(cat!.id, selectedPortion);
                           if (!sheetContext.mounted) return;
+                          if (ok) {
+                            HapticFeedback.mediumImpact();
+                          } else {
+                            HapticFeedback.vibrate();
+                          }
                           Navigator.pop(sheetContext);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -392,7 +404,10 @@ class _DashboardTab extends StatelessWidget {
     final mealCount = (summary?['mealCount'] as int?) ?? 0;
     final dailyGoalGrams = profile?.dailyGoalGrams ?? 200;
 
-    return ListView(
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: () async => onProfileChanged(),
+      child: ListView(
       padding: const EdgeInsets.fromLTRB(18, 6, 18, 24),
       children: [
         Row(
@@ -452,6 +467,7 @@ class _DashboardTab extends StatelessWidget {
         ),
         const SizedBox(height: 20),
       ],
+      ),
     );
   }
 }
