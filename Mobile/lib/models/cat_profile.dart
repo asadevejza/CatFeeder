@@ -6,12 +6,14 @@ class CatProfile {
   final String breed;
   final int ageYears;
   final double weightKg;
+  final int dailyGoalGrams;
 
   const CatProfile({
     required this.gender,
     required this.breed,
     required this.ageYears,
     required this.weightKg,
+    this.dailyGoalGrams = 200,
   });
 
   Map<String, dynamic> toJson() => {
@@ -19,6 +21,7 @@ class CatProfile {
         'breed': breed,
         'ageYears': ageYears,
         'weightKg': weightKg,
+        'dailyGoalGrams': dailyGoalGrams,
       };
 
   factory CatProfile.fromJson(Map<String, dynamic> json) => CatProfile(
@@ -26,12 +29,14 @@ class CatProfile {
         breed: json['breed'] as String? ?? '',
         ageYears: (json['ageYears'] as num?)?.toInt() ?? 0,
         weightKg: (json['weightKg'] as num?)?.toDouble() ?? 0.0,
+        dailyGoalGrams: (json['dailyGoalGrams'] as num?)?.toInt() ?? 200,
       );
 
-  CatProfile copyWith({String? gender, String? breed, int? ageYears, double? weightKg}) => CatProfile(
+  CatProfile copyWith({String? gender, String? breed, int? ageYears, double? weightKg, int? dailyGoalGrams}) => CatProfile(
         gender: gender ?? this.gender,
         breed: breed ?? this.breed,
         ageYears: ageYears ?? this.ageYears,
         weightKg: weightKg ?? this.weightKg,
+        dailyGoalGrams: dailyGoalGrams ?? this.dailyGoalGrams,
       );
 }

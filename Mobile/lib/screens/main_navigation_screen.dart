@@ -49,6 +49,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   bool _foodAlertActive = false;
   bool _waterAlertActive = false;
 
+  // Prikazuje baner kad backend nije dostupan (pogrešna adresa, nema mreže...)
+  bool connectionError = false;
+
   @override
   void initState() {
     super.initState();
@@ -73,15 +76,27 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             temp = (lastReading['temperature'] as num?)?.toDouble() ?? 0.0;
             humidity = (lastReading['humidity'] as num?)?.toDouble() ?? 0.0;
             isLoadingDashboard = false;
+            connectionError = false;
           });
           _checkLowLevelAlerts();
         } else {
-          setState(() => isLoadingDashboard = false);
+          setState(() {
+            isLoadingDashboard = false;
+            connectionError = false;
+          });
         }
+      } else {
+        setState(() {
+          isLoadingDashboard = false;
+          connectionError = true;
+        });
       }
     } catch (_) {
       if (!mounted) return;
-      setState(() => isLoadingDashboard = false);
+      setState(() {
+        isLoadingDashboard = false;
+        connectionError = true;
+      });
     }
   }
 
@@ -114,17 +129,24 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         setState(() {
           cats = loaded;
           isLoadingCats = false;
+          connectionError = false;
           if (selectedCatId == null && loaded.isNotEmpty) {
             selectedCatId = loaded.first.id;
           }
         });
         fetchFeedingSummary();
       } else {
-        setState(() => isLoadingCats = false);
+        setState(() {
+          isLoadingCats = false;
+          connectionError = true;
+        });
       }
     } catch (_) {
       if (!mounted) return;
-      setState(() => isLoadingCats = false);
+      setState(() {
+        isLoadingCats = false;
+        connectionError = true;
+      });
     }
   }
 
@@ -282,6 +304,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         humidity: humidity,
         isLoading: isLoadingDashboard,
         cats: cats,
+        connectionError: connectionError,
+        baseUrl: baseUrl,
+        onSaveBaseUrl: updateBaseUrl,
         onRefresh: () async {
           await fetchSensorData();
           await fetchFeedingSummary();

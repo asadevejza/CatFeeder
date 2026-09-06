@@ -2,6 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
+import '../localization/app_strings.dart';
 
 // Upravlja lokalnim notifikacijama — podsjetnici za zakazano hranjenje i
 // upozorenja kad ponestane hrane/vode. Sve radi lokalno na telefonu, ne
@@ -10,21 +11,21 @@ class NotificationService {
   static final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
 
-  static const AndroidNotificationDetails _scheduleAndroidDetails = AndroidNotificationDetails(
-    'feeding_schedule_channel',
-    'Podsjetnici za hranjenje',
-    channelDescription: 'Podsjeća te kad je vrijeme za zakazano hranjenje',
-    importance: Importance.high,
-    priority: Priority.high,
-  );
+  static AndroidNotificationDetails get _scheduleAndroidDetails => AndroidNotificationDetails(
+        'feeding_schedule_channel',
+        AppStrings.t('notif_schedule_channel_name'),
+        channelDescription: AppStrings.t('notif_schedule_channel_desc'),
+        importance: Importance.high,
+        priority: Priority.high,
+      );
 
-  static const AndroidNotificationDetails _alertAndroidDetails = AndroidNotificationDetails(
-    'low_level_channel',
-    'Upozorenja o nivou',
-    channelDescription: 'Upozorava kad ponestane hrane ili vode',
-    importance: Importance.high,
-    priority: Priority.high,
-  );
+  static AndroidNotificationDetails get _alertAndroidDetails => AndroidNotificationDetails(
+        'low_level_channel',
+        AppStrings.t('notif_alert_channel_name'),
+        channelDescription: AppStrings.t('notif_alert_channel_desc'),
+        importance: Importance.high,
+        priority: Priority.high,
+      );
 
   static Future<void> init() async {
     if (_initialized) return;
@@ -107,10 +108,10 @@ class NotificationService {
 
       await _plugin.zonedSchedule(
         id: _idForScheduleDay(scheduleId, weekday),
-        title: 'Vrijeme za hranjenje 🐾',
-        body: '$catName treba $portionGrams g hrane',
+        title: AppStrings.t('notif_feeding_title'),
+        body: '$catName ${AppStrings.t('notif_feeding_body_needs')} $portionGrams g',
         scheduledDate: scheduledDate,
-        notificationDetails: const NotificationDetails(android: _scheduleAndroidDetails),
+        notificationDetails: NotificationDetails(android: _scheduleAndroidDetails),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
       );
@@ -129,15 +130,15 @@ class NotificationService {
   // Fiksni ID po tipu (hrana/voda) — nova poruka zamijeni prethodnu umjesto gomilanja.
   static Future<void> showLowLevelAlert({required bool isFood, required double level}) async {
     final id = isFood ? 900001 : 900002;
-    final title = isFood ? 'Ponestaje hrane! 🍽️' : 'Ponestaje vode! 💧';
-    final body =
-        '${isFood ? "Nivo hrane" : "Nivo vode"} je pao na ${level.toStringAsFixed(0)}%. Vrijeme je da dosuješ.';
+    final title = isFood ? AppStrings.t('notif_food_low_title') : AppStrings.t('notif_water_low_title');
+    final levelWord = isFood ? AppStrings.t('notif_level_food_word') : AppStrings.t('notif_level_water_word');
+    final body = '$levelWord ${AppStrings.t('notif_level_body_suffix')} ${level.toStringAsFixed(0)}%. ${AppStrings.t('notif_level_body_action')}';
 
     await _plugin.show(
       id: id,
       title: title,
       body: body,
-      notificationDetails: const NotificationDetails(android: _alertAndroidDetails),
+      notificationDetails: NotificationDetails(android: _alertAndroidDetails),
     );
   }
 }

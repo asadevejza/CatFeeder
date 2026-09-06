@@ -22,6 +22,7 @@ class _AddCatScreenState extends State<AddCatScreen> {
   late final _breedController = TextEditingController(text: widget.existingProfile?.breed ?? '');
   late final _ageController = TextEditingController(text: widget.existingProfile?.ageYears.toString() ?? '');
   late final _weightController = TextEditingController(text: widget.existingProfile?.weightKg.toString() ?? '');
+  late final _goalController = TextEditingController(text: (widget.existingProfile?.dailyGoalGrams ?? 200).toString());
   late String _gender = widget.existingProfile?.gender ?? 'Mužjak';
   bool _isSaving = false;
   bool _isDeleting = false;
@@ -41,6 +42,7 @@ class _AddCatScreenState extends State<AddCatScreen> {
       breed: _breedController.text.trim().isEmpty ? AppStrings.t('unknown_breed') : _breedController.text.trim(),
       ageYears: int.parse(_ageController.text.trim()),
       weightKg: double.parse(_weightController.text.trim().replaceAll(',', '.')),
+      dailyGoalGrams: int.tryParse(_goalController.text.trim()) ?? 200,
     );
     final bool ok = isEditMode
         ? await widget.onUpdate!(widget.existingCat!.id, _nameController.text.trim(), profile)
@@ -131,6 +133,10 @@ class _AddCatScreenState extends State<AddCatScreen> {
               Text(AppStrings.t('breed_label'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
               const SizedBox(height: 8),
               _field(_breedController, AppStrings.t('eg_domestic_shorthair')),
+              const SizedBox(height: 18),
+              Text(AppStrings.t('daily_goal_label'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              const SizedBox(height: 8),
+              _field(_goalController, '200', keyboardType: TextInputType.number, suffix: 'g'),
               const SizedBox(height: 28),
               ElevatedButton(
                 onPressed: _isSaving ? null : _save,
@@ -154,13 +160,14 @@ class _AddCatScreenState extends State<AddCatScreen> {
     );
   }
 
-  Widget _field(TextEditingController controller, String hint, {TextInputType? keyboardType}) {
+  Widget _field(TextEditingController controller, String hint, {TextInputType? keyboardType, String? suffix}) {
     return TextField(
       controller: controller,
       onChanged: (_) => setState(() {}),
       keyboardType: keyboardType,
       decoration: InputDecoration(
         hintText: hint,
+        suffixText: suffix,
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.grey.shade200)),

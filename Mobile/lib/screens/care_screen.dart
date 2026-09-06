@@ -390,7 +390,7 @@ class _DashboardTab extends StatelessWidget {
 
     final todayGrams = (summary?['todayGrams'] as int?) ?? 0;
     final mealCount = (summary?['mealCount'] as int?) ?? 0;
-    const dailyGoalGrams = 200;
+    final dailyGoalGrams = profile?.dailyGoalGrams ?? 200;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(18, 6, 18, 24),

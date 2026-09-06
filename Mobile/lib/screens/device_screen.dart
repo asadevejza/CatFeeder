@@ -5,6 +5,7 @@ import '../models/cat.dart';
 import '../services/profile_service.dart';
 import 'status_detail_screen.dart';
 import 'camera_screen.dart';
+import 'server_address_screen.dart';
 
 class DeviceScreen extends StatefulWidget {
   final double foodLevel;
@@ -14,6 +15,9 @@ class DeviceScreen extends StatefulWidget {
   final bool isLoading;
   final Future<void> Function() onRefresh;
   final List<Cat> cats;
+  final bool connectionError;
+  final String baseUrl;
+  final Future<void> Function(String) onSaveBaseUrl;
 
   const DeviceScreen({
     super.key,
@@ -24,6 +28,9 @@ class DeviceScreen extends StatefulWidget {
     required this.isLoading,
     required this.onRefresh,
     required this.cats,
+    required this.connectionError,
+    required this.baseUrl,
+    required this.onSaveBaseUrl,
   });
 
   @override
@@ -78,6 +85,46 @@ class _DeviceScreenState extends State<DeviceScreen> {
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(18, 28, 18, 24),
                     children: [
+                      if (widget.connectionError)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(18),
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ServerAddressScreen(currentBaseUrl: widget.baseUrl, onSave: widget.onSaveBaseUrl),
+                              ),
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF3E0),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: const Color(0xFFFFCC80)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.cloud_off_rounded, color: Color(0xFFEF6C00)),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(AppStrings.t('connection_error_title'),
+                                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF7A4A00))),
+                                        const SizedBox(height: 2),
+                                        Text(AppStrings.t('connection_error_body'),
+                                            style: const TextStyle(fontSize: 11.5, color: Color(0xFF7A4A00))),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(Icons.chevron_right_rounded, color: Color(0xFFEF6C00)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       InkWell(
                         borderRadius: BorderRadius.circular(24),
                         onTap: () => Navigator.push(

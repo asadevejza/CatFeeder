@@ -64,16 +64,16 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/icon/icon.png"
   min_sdk_android: 21
-  adaptive_icon_background: "#FF5722"
+  adaptive_icon_background: "#325603"
   adaptive_icon_foreground: "assets/icon/icon_foreground.png"
 
 # Konfiguracija za flutter_native_splash — pokreni sa: dart run flutter_native_splash:create
 flutter_native_splash:
-  color: "#FFF8F2"
+  color: "#F1F4E9"
   image: "assets/icon/splash_logo.png"
   android_12:
     image: "assets/icon/splash_logo.png"
-    icon_background_color: "#FFF8F2"
+    icon_background_color: "#F1F4E9"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
