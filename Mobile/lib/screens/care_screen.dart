@@ -31,7 +31,7 @@ class CareScreen extends StatefulWidget {
   final void Function(int catId) onSelectCat;
   final Map<int, Map<String, dynamic>> feedingSummaryByCat;
   final double? waterLevel;
-  final Future<bool> Function(String name, CatProfile profile) onAddCat;
+  final Future<int?> Function(String name, CatProfile profile) onAddCat;
   final Future<bool> Function(int catId, String name, CatProfile profile) onUpdateCat;
   final Future<bool> Function(int catId, int portionGrams) onFeedNow;
   final String baseUrl;
@@ -296,7 +296,7 @@ class _DashboardTab extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (context) => AddCatScreen(
-          onSave: (name, profile) async => false, // se ne koristi u edit modu
+          onSave: (name, profile) async => null, // se ne koristi u edit modu
           existingCat: cat,
           existingProfile: profile,
           onUpdate: onUpdateCat,

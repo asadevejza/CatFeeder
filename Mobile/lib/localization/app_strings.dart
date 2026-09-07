@@ -57,6 +57,7 @@ class AppStrings {
       'notif_alert_channel_name': 'Upozorenja o nivou',
       'notif_alert_channel_desc': 'Upozorava kad ponestane hrane ili vode',
       'version_label': 'Verzija', 'close_button': 'Zatvori',
+      'edit_name_title': 'Tvoje ime', 'your_name_hint': 'npr. Asad',
 
       'server_url_invalid': 'Adresa mora početi sa http:// ili https://',
       'connection_success': 'Konekcija uspješna! Server odgovara.',
@@ -171,6 +172,7 @@ class AppStrings {
       'notif_alert_channel_name': 'Level alerts',
       'notif_alert_channel_desc': 'Warns you when food or water is running low',
       'version_label': 'Version', 'close_button': 'Close',
+      'edit_name_title': 'Your name', 'your_name_hint': 'e.g. Asad',
 
       'server_url_invalid': 'Address must start with http:// or https://',
       'connection_success': 'Connection successful! Server is responding.',

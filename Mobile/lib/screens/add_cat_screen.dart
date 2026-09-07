@@ -1,11 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/cat.dart';
 import '../models/cat_profile.dart';
+import '../services/cat_avatar_service.dart';
 import '../theme/app_colors.dart';
 import '../localization/app_strings.dart';
 
 class AddCatScreen extends StatefulWidget {
-  final Future<bool> Function(String name, CatProfile profile) onSave;
+  final Future<int?> Function(String name, CatProfile profile) onSave;
   final Cat? existingCat;
   final CatProfile? existingProfile;
   final Future<bool> Function(int catId, String name, CatProfile profile)? onUpdate;
@@ -27,7 +30,32 @@ class _AddCatScreenState extends State<AddCatScreen> {
   bool _isSaving = false;
   bool _isDeleting = false;
 
+  XFile? _pickedImage;
+  String? _existingAvatarPath;
+
   bool get isEditMode => widget.existingCat != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (isEditMode) _loadExistingAvatar();
+  }
+
+  Future<void> _loadExistingAvatar() async {
+    final path = await CatAvatarService.getAvatarPath(widget.existingCat!.id);
+    if (!mounted || path == null) return;
+    setState(() => _existingAvatarPath = path);
+  }
+
+  Future<void> _pickImage() async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 800, imageQuality: 85);
+    if (picked == null) return;
+    setState(() => _pickedImage = picked);
+    // U edit modu mačka već ima ID pa sliku možemo sačuvati odmah.
+    if (isEditMode) {
+      await CatAvatarService.setAvatar(widget.existingCat!.id, picked);
+    }
+  }
 
   bool get _isValid =>
       _nameController.text.trim().isNotEmpty &&
@@ -44,9 +72,16 @@ class _AddCatScreenState extends State<AddCatScreen> {
       weightKg: double.parse(_weightController.text.trim().replaceAll(',', '.')),
       dailyGoalGrams: int.tryParse(_goalController.text.trim()) ?? 200,
     );
-    final bool ok = isEditMode
-        ? await widget.onUpdate!(widget.existingCat!.id, _nameController.text.trim(), profile)
-        : await widget.onSave(_nameController.text.trim(), profile);
+    bool ok;
+    if (isEditMode) {
+      ok = await widget.onUpdate!(widget.existingCat!.id, _nameController.text.trim(), profile);
+    } else {
+      final newId = await widget.onSave(_nameController.text.trim(), profile);
+      ok = newId != null;
+      if (ok && _pickedImage != null) {
+        await CatAvatarService.setAvatar(newId!, _pickedImage!);
+      }
+    }
     if (!mounted) return;
     setState(() => _isSaving = false);
     if (ok) {
@@ -100,6 +135,8 @@ class _AddCatScreenState extends State<AddCatScreen> {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
+              Center(child: _avatarPicker()),
+              const SizedBox(height: 24),
               Text(AppStrings.t('cat_name_label'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
               const SizedBox(height: 8),
               _field(_nameController, AppStrings.t('eg_bella')),
@@ -156,6 +193,48 @@ class _AddCatScreenState extends State<AddCatScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _avatarPicker() {
+    ImageProvider? image;
+    if (_pickedImage != null) {
+      image = FileImage(File(_pickedImage!.path));
+    } else if (_existingAvatarPath != null) {
+      image = FileImage(File(_existingAvatarPath!));
+    }
+
+    return GestureDetector(
+      onTap: _pickImage,
+      child: Stack(
+        children: [
+          Container(
+            width: 96,
+            height: 96,
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(colors: [AppColors.primaryLight, AppColors.primary], begin: Alignment.topLeft, end: Alignment.bottomRight),
+              boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.25), blurRadius: 14, offset: const Offset(0, 6))],
+            ),
+            child: CircleAvatar(
+              radius: 45,
+              backgroundColor: AppColors.tint50,
+              backgroundImage: image,
+              child: image == null ? const Text('🐈', style: TextStyle(fontSize: 38)) : null,
+            ),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2.5)),
+              child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 16),
+            ),
+          ),
+        ],
       ),
     );
   }

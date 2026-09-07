@@ -215,21 +215,21 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
-  Future<bool> addCat(String name, CatProfile catProfile) async {
+  Future<int?> addCat(String name, CatProfile catProfile) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/cats'),
         headers: apiHeaders(withJsonBody: true),
         body: json.encode({'name': name}),
       );
-      if (response.statusCode != 200 && response.statusCode != 201) return false;
+      if (response.statusCode != 200 && response.statusCode != 201) return null;
       final created = json.decode(response.body) as Map<String, dynamic>;
       final newCatId = created['id'] as int;
       await ProfileService.saveCatProfile(newCatId, catProfile);
       await fetchCats();
-      return true;
+      return newCatId;
     } catch (_) {
-      return false;
+      return null;
     }
   }
 
