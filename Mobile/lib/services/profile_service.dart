@@ -20,6 +20,15 @@ class ProfileService {
     await prefs.setBool(_onboardingCompleteKey, true);
   }
 
+  // Odjava — vraća na welcome ekran i briše samo ime vlasnika. Ne dira
+  // mačke, rasporede, historiju ni adresu servera (to su podaci hranilice,
+  // ne "korisničkog naloga" — backend nema pravi sistem naloga).
+  static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_onboardingCompleteKey);
+    await prefs.remove(_ownerNameKey);
+  }
+
   static Future<String?> getOwnerName() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_ownerNameKey);

@@ -20,7 +20,8 @@ import 'settings_screen.dart';
 // ================= GLAVNA NAVIGACIJA + DIJELJENO STANJE =================
 class MainNavigationScreen extends StatefulWidget {
   final String initialBaseUrl;
-  const MainNavigationScreen({super.key, required this.initialBaseUrl});
+  final VoidCallback? onLogout;
+  const MainNavigationScreen({super.key, required this.initialBaseUrl, this.onLogout});
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -341,6 +342,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         onUpdateCat: updateCat,
         onDeleteCat: deleteCat,
         onSaveBaseUrl: updateBaseUrl,
+        onLogout: widget.onLogout,
       ),
     ];
 

@@ -58,6 +58,10 @@ class AppStrings {
       'notif_alert_channel_desc': 'Upozorava kad ponestane hrane ili vode',
       'version_label': 'Verzija', 'close_button': 'Zatvori',
       'edit_name_title': 'Tvoje ime', 'your_name_hint': 'npr. Asad',
+      'welcome_subtitle': 'Brižna njega za tvoju mačku, na dohvat ruke.',
+      'your_name_question': 'Kako se zoveš?', 'continue_button': 'Nastavi',
+      'logout': 'Odjava', 'logout_confirm_title': 'Odjaviti se?',
+      'logout_confirm_body': 'Tvoje ime će biti obrisano. Mačke, rasporedi i adresa servera ostaju sačuvani.',
 
       'server_url_invalid': 'Adresa mora početi sa http:// ili https://',
       'connection_success': 'Konekcija uspješna! Server odgovara.',
@@ -173,6 +177,10 @@ class AppStrings {
       'notif_alert_channel_desc': 'Warns you when food or water is running low',
       'version_label': 'Version', 'close_button': 'Close',
       'edit_name_title': 'Your name', 'your_name_hint': 'e.g. Asad',
+      'welcome_subtitle': 'Caring for your cat, right at your fingertips.',
+      'your_name_question': "What's your name?", 'continue_button': 'Continue',
+      'logout': 'Log out', 'logout_confirm_title': 'Log out?',
+      'logout_confirm_body': 'Your name will be cleared. Cats, schedules and the server address stay saved.',
 
       'server_url_invalid': 'Address must start with http:// or https://',
       'connection_success': 'Connection successful! Server is responding.',

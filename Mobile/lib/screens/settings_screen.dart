@@ -18,6 +18,7 @@ class SettingsScreen extends StatefulWidget {
   final Future<bool> Function(int catId, String name, CatProfile profile) onUpdateCat;
   final Future<bool> Function(int catId) onDeleteCat;
   final Future<void> Function(String newUrl) onSaveBaseUrl;
+  final VoidCallback? onLogout;
 
   const SettingsScreen({
     super.key,
@@ -28,6 +29,7 @@ class SettingsScreen extends StatefulWidget {
     required this.onUpdateCat,
     required this.onDeleteCat,
     required this.onSaveBaseUrl,
+    this.onLogout,
   });
 
   @override
@@ -337,6 +339,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ),
+              if (widget.onLogout != null) ...[
+                const SizedBox(height: 10),
+                _ProfileListItem(
+                  icon: Icons.logout_rounded,
+                  label: AppStrings.t('logout'),
+                  subtitle: '',
+                  iconColor: Colors.redAccent,
+                  onTap: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        title: Text(AppStrings.t('logout_confirm_title')),
+                        content: Text(AppStrings.t('logout_confirm_body')),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(AppStrings.t('cancel'))),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: Text(AppStrings.t('logout'), style: const TextStyle(color: Colors.redAccent)),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      await ProfileService.logout();
+                      widget.onLogout!();
+                    }
+                  },
+                ),
+              ],
             ],
           ),
         ),
@@ -370,10 +402,12 @@ class _ProfileListItem extends StatelessWidget {
   final String label;
   final String? subtitle;
   final VoidCallback onTap;
-  const _ProfileListItem({required this.icon, required this.label, this.subtitle, required this.onTap});
+  final Color? iconColor;
+  const _ProfileListItem({required this.icon, required this.label, this.subtitle, required this.onTap, this.iconColor});
 
   @override
   Widget build(BuildContext context) {
+    final color = iconColor ?? AppColors.primary;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
@@ -390,7 +424,7 @@ class _ProfileListItem extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [AppColors.primaryLight, AppColors.primary], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                gradient: LinearGradient(colors: [color.withOpacity(0.85), color], begin: Alignment.topLeft, end: Alignment.bottomRight),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: Colors.white, size: 20),
@@ -401,7 +435,7 @@ class _ProfileListItem extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                  if (subtitle != null) ...[
+                  if (subtitle != null && subtitle!.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.black45)),
                   ],
