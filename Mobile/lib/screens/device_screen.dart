@@ -6,6 +6,7 @@ import '../services/profile_service.dart';
 import 'status_detail_screen.dart';
 import 'camera_screen.dart';
 import 'server_address_screen.dart';
+import '../widgets/skeleton_box.dart';
 
 class DeviceScreen extends StatefulWidget {
   final double foodLevel;
@@ -78,7 +79,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
           ),
           child: SafeArea(
             child: widget.isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                ? const _DeviceSkeletonLoader()
                 : RefreshIndicator(
                     color: AppColors.primary,
                     onRefresh: widget.onRefresh,
@@ -321,6 +322,27 @@ class _MiniStatLight extends StatelessWidget {
           Text(label, style: const TextStyle(fontSize: 10, color: Colors.white70)),
         ],
       ),
+    );
+  }
+}
+
+// Skeleton prikaz dok se prvi put učitavaju podaci sa hranilice — oponaša
+// oblik prave "hero" kartice i "Discover" kartice ispod nje.
+class _DeviceSkeletonLoader extends StatelessWidget {
+  const _DeviceSkeletonLoader();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(18, 28, 18, 24),
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        SkeletonBox(height: 190, borderRadius: BorderRadius.circular(28)),
+        const SizedBox(height: 28),
+        const SkeletonBox(height: 16, width: 90),
+        const SizedBox(height: 10),
+        SkeletonBox(height: 78, borderRadius: BorderRadius.circular(20)),
+      ],
     );
   }
 }

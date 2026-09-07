@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../localization/app_strings.dart';
+import '../widgets/skeleton_box.dart';
 
 // Detaljan status hranilice - otvara se klikom na uređaj na "Uređaji" tabu.
 class StatusDetailScreen extends StatelessWidget {
@@ -28,7 +29,23 @@ class StatusDetailScreen extends StatelessWidget {
       builder: (context, _, __) => Scaffold(
       appBar: AppBar(title: Text(AppStrings.t('feeder_status_title'))),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? ListView(
+              padding: const EdgeInsets.all(18.0),
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                SkeletonBox(height: 150, borderRadius: BorderRadius.circular(20)),
+                const SizedBox(height: 16),
+                SkeletonBox(height: 150, borderRadius: BorderRadius.circular(20)),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(child: SkeletonBox(height: 110, borderRadius: BorderRadius.circular(20))),
+                    const SizedBox(width: 14),
+                    Expanded(child: SkeletonBox(height: 110, borderRadius: BorderRadius.circular(20))),
+                  ],
+                ),
+              ],
+            )
           : RefreshIndicator(
               onRefresh: onRefresh,
               child: ListView(

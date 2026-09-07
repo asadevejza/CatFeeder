@@ -291,7 +291,12 @@ class _TrendScreenState extends State<TrendScreen> {
     }
     return LineChart(
       LineChartData(
-        gridData: const FlGridData(show: false),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: null,
+          getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.shade100, strokeWidth: 1),
+        ),
         titlesData: FlTitlesData(
           leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -302,23 +307,47 @@ class _TrendScreenState extends State<TrendScreen> {
               getTitlesWidget: (value, meta) {
                 final i = value.toInt();
                 if (i < 0 || i >= _days.length) return const SizedBox.shrink();
+                final isToday = i == _days.length - 1;
                 return Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(_dayLettersShort[_days[i].weekday - 1], style: const TextStyle(fontSize: 11, color: Colors.black45)),
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    _dayLettersShort[_days[i].weekday - 1],
+                    style: TextStyle(fontSize: 11, fontWeight: isToday ? FontWeight.w800 : FontWeight.normal, color: isToday ? _color : Colors.black45),
+                  ),
                 );
               },
             ),
           ),
         ),
         borderData: FlBorderData(show: false),
+        lineTouchData: LineTouchData(
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipColor: (_) => _color,
+            tooltipRoundedRadius: 10,
+            getTooltipItems: (spots) => spots
+                .map((s) => LineTooltipItem('${s.y.toStringAsFixed(1)} $_unit', const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)))
+                .toList(),
+          ),
+        ),
         lineBarsData: [
           LineChartBarData(
             spots: spots,
             isCurved: true,
-            color: _color,
-            barWidth: 3,
-            dotData: const FlDotData(show: true),
-            belowBarData: BarAreaData(show: true, color: _color.withOpacity(0.12)),
+            curveSmoothness: 0.3,
+            gradient: LinearGradient(colors: [_color.withOpacity(0.6), _color]),
+            barWidth: 3.5,
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(radius: 4.5, color: _color, strokeWidth: 2.5, strokeColor: Colors.white),
+            ),
+            belowBarData: BarAreaData(
+              show: true,
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [_color.withOpacity(0.22), _color.withOpacity(0.0)],
+              ),
+            ),
           ),
         ],
       ),
@@ -330,10 +359,23 @@ class _TrendScreenState extends State<TrendScreen> {
     if (!hasAny) {
       return Center(child: Text(AppStrings.t('no_data_7_days'), style: TextStyle(color: Colors.grey.shade400, fontSize: 12)));
     }
+    final maxV = _values.whereType<double>().fold(0.0, (a, b) => a > b ? a : b);
     return BarChart(
       BarChartData(
-        gridData: const FlGridData(show: false),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.shade100, strokeWidth: 1),
+        ),
         borderData: FlBorderData(show: false),
+        barTouchData: BarTouchData(
+          touchTooltipData: BarTouchTooltipData(
+            getTooltipColor: (_) => _color,
+            tooltipRoundedRadius: 10,
+            getTooltipItem: (group, groupIndex, rod, rodIndex) =>
+                BarTooltipItem('${rod.toY.toStringAsFixed(0)} $_unit', const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+          ),
+        ),
         titlesData: FlTitlesData(
           leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -344,9 +386,13 @@ class _TrendScreenState extends State<TrendScreen> {
               getTitlesWidget: (value, meta) {
                 final i = value.toInt();
                 if (i < 0 || i >= _days.length) return const SizedBox.shrink();
+                final isToday = i == _days.length - 1;
                 return Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(_dayLettersShort[_days[i].weekday - 1], style: const TextStyle(fontSize: 11, color: Colors.black45)),
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    _dayLettersShort[_days[i].weekday - 1],
+                    style: TextStyle(fontSize: 11, fontWeight: isToday ? FontWeight.w800 : FontWeight.normal, color: isToday ? _color : Colors.black45),
+                  ),
                 );
               },
             ),
@@ -354,9 +400,22 @@ class _TrendScreenState extends State<TrendScreen> {
         ),
         barGroups: List.generate(_values.length, (i) {
           final v = _values[i] ?? 0;
+          final isToday = i == _values.length - 1;
           return BarChartGroupData(
             x: i,
-            barRods: [BarChartRodData(toY: v, color: _color, width: 16, borderRadius: BorderRadius.circular(4))],
+            barRods: [
+              BarChartRodData(
+                toY: v > 0 ? v : 0,
+                width: 18,
+                borderRadius: BorderRadius.circular(6),
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: isToday ? [_color, _color] : [_color.withOpacity(0.55), _color.withOpacity(0.75)],
+                ),
+                backDrawRodData: BackgroundBarChartRodData(show: true, toY: maxV == 0 ? 1 : maxV * 1.15, color: Colors.grey.shade50),
+              ),
+            ],
           );
         }),
       ),

@@ -56,6 +56,7 @@ class AppStrings {
       'notif_schedule_channel_desc': 'Podsjeća te kad je vrijeme za zakazano hranjenje',
       'notif_alert_channel_name': 'Upozorenja o nivou',
       'notif_alert_channel_desc': 'Upozorava kad ponestane hrane ili vode',
+      'version_label': 'Verzija', 'close_button': 'Zatvori',
 
       'server_url_invalid': 'Adresa mora početi sa http:// ili https://',
       'connection_success': 'Konekcija uspješna! Server odgovara.',
@@ -169,6 +170,7 @@ class AppStrings {
       'notif_schedule_channel_desc': 'Reminds you when it\'s time for a scheduled feeding',
       'notif_alert_channel_name': 'Level alerts',
       'notif_alert_channel_desc': 'Warns you when food or water is running low',
+      'version_label': 'Version', 'close_button': 'Close',
 
       'server_url_invalid': 'Address must start with http:// or https://',
       'connection_success': 'Connection successful! Server is responding.',

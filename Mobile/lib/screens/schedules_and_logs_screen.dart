@@ -6,6 +6,7 @@ import '../api_config.dart';
 import '../models/cat.dart';
 import '../services/notification_service.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/skeleton_box.dart';
 import 'schedule_form_screen.dart';
 import '../theme/app_colors.dart';
 import '../localization/app_strings.dart';
@@ -247,7 +248,7 @@ class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with Si
               )
             : null,
         body: isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const _LogsSkeletonLoader()
             : TabBarView(
                 controller: _tabController,
                 children: [
@@ -400,11 +401,16 @@ class _WeeklyFeedingChart extends StatelessWidget {
                 BarChartData(
                   maxY: chartMaxY,
                   minY: 0,
-                  gridData: const FlGridData(show: false),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.shade100, strokeWidth: 1),
+                  ),
                   borderData: FlBorderData(show: false),
                   barTouchData: BarTouchData(
                     touchTooltipData: BarTouchTooltipData(
                       getTooltipColor: (_) => AppColors.primary,
+                      tooltipRoundedRadius: 10,
                       getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
                         '${rod.toY.toStringAsFixed(0)}g',
                         const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
@@ -423,9 +429,13 @@ class _WeeklyFeedingChart extends StatelessWidget {
                           final index = value.toInt();
                           if (index < 0 || index >= entries.length) return const SizedBox.shrink();
                           final weekday = entries[index].key.weekday; // 1 = ponedjeljak ... 7 = nedjelja
+                          final isToday = index == entries.length - 1;
                           return Padding(
                             padding: const EdgeInsets.only(top: 8),
-                            child: Text(_dayLabels[weekday - 1], style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                            child: Text(
+                              _dayLabels[weekday - 1],
+                              style: TextStyle(fontSize: 11, fontWeight: isToday ? FontWeight.w800 : FontWeight.normal, color: isToday ? AppColors.primary : Colors.black54),
+                            ),
                           );
                         },
                       ),
@@ -438,9 +448,19 @@ class _WeeklyFeedingChart extends StatelessWidget {
                         barRods: [
                           BarChartRodData(
                             toY: entries[i].value,
-                            color: entries[i].value > 0 ? AppColors.primary : AppColors.tint100,
                             width: 20,
                             borderRadius: BorderRadius.circular(6),
+                            gradient: entries[i].value > 0
+                                ? LinearGradient(
+                                    begin: Alignment.bottomCenter,
+                                    end: Alignment.topCenter,
+                                    colors: i == entries.length - 1
+                                        ? [AppColors.primaryDark, AppColors.primary]
+                                        : [AppColors.primary.withOpacity(0.55), AppColors.primaryLight.withOpacity(0.75)],
+                                  )
+                                : null,
+                            color: entries[i].value > 0 ? null : AppColors.tint100,
+                            backDrawRodData: BackgroundBarChartRodData(show: true, toY: chartMaxY, color: Colors.grey.shade50),
                           ),
                         ],
                       ),
@@ -451,6 +471,27 @@ class _WeeklyFeedingChart extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// Skeleton prikaz dok se učitavaju historija/rasporedi hranjenja.
+class _LogsSkeletonLoader extends StatelessWidget {
+  const _LogsSkeletonLoader();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(18),
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        SkeletonBox(height: 210, borderRadius: BorderRadius.circular(20)),
+        const SizedBox(height: 18),
+        for (int i = 0; i < 4; i++) ...[
+          SkeletonBox(height: 64, borderRadius: BorderRadius.circular(18)),
+          const SizedBox(height: 10),
+        ],
+      ],
     );
   }
 }

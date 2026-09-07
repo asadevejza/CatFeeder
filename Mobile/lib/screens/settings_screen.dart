@@ -268,12 +268,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 icon: Icons.info_outline_rounded,
                 label: AppStrings.t('about_app'),
                 subtitle: AppStrings.t('about_app_sub'),
-                onTap: () => showAboutDialog(
+                onTap: () => showDialog(
                   context: context,
-                  applicationName: 'CatFeeder',
-                  applicationVersion: '1.0.0',
-                  applicationIcon: const Icon(Icons.pets_rounded, color: AppColors.primary, size: 32),
-                  children: [Padding(padding: const EdgeInsets.only(top: 12), child: Text(AppStrings.t('about_app_body')))],
+                  builder: (context) => Dialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 72,
+                            height: 72,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(colors: [AppColors.primaryLight, AppColors.primary], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                              shape: BoxShape.circle,
+                              boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 14, offset: const Offset(0, 6))],
+                            ),
+                            child: const Icon(Icons.pets_rounded, color: Colors.white, size: 34),
+                          ),
+                          const SizedBox(height: 18),
+                          const Text('CatFeeder', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 4),
+                          Text('${AppStrings.t('version_label')} 1.0.0', style: const TextStyle(fontSize: 12, color: Colors.black45)),
+                          const SizedBox(height: 16),
+                          Text(AppStrings.t('about_app_body'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 13.5, color: Colors.black54, height: 1.4)),
+                          const SizedBox(height: 22),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: Text(AppStrings.t('close_button')),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],

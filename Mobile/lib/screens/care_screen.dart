@@ -10,6 +10,9 @@ import 'add_cat_screen.dart';
 import 'trend_screen.dart';
 import '../theme/app_colors.dart';
 import '../localization/app_strings.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/feedback_overlay.dart';
+import '../widgets/skeleton_box.dart';
 
 const List<String> _mjeseciBs = [
   'jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'avg', 'sep', 'okt', 'nov', 'dec',
@@ -104,6 +107,14 @@ class _CareScreenState extends State<CareScreen> with SingleTickerProviderStateM
     return match.isNotEmpty ? match.first : (widget.cats.isNotEmpty ? widget.cats.first : null);
   }
 
+  Future<void> _openAddCat() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => AddCatScreen(onSave: widget.onAddCat)),
+    );
+    _loadProfiles();
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<String>(
@@ -135,13 +146,7 @@ class _CareScreenState extends State<CareScreen> with SingleTickerProviderStateM
                 selectedCatId: widget.selectedCatId,
                 avatarPaths: _avatarPaths,
                 onSelectCat: widget.onSelectCat,
-                onAddCat: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => AddCatScreen(onSave: widget.onAddCat)),
-                  );
-                  _loadProfiles();
-                },
+                onAddCat: _openAddCat,
               ),
               Expanded(
                 child: TabBarView(
@@ -155,8 +160,9 @@ class _CareScreenState extends State<CareScreen> with SingleTickerProviderStateM
                       onUpdateCat: widget.onUpdateCat,
                       onFeedNow: widget.onFeedNow,
                       onProfileChanged: _loadProfiles,
+                      onAddCat: _openAddCat,
                     ),
-                    _CareListTab(cat: _selectedCat),
+                    _CareListTab(cat: _selectedCat, onAddCat: _openAddCat),
                   ],
                 ),
               ),
@@ -271,6 +277,7 @@ class _DashboardTab extends StatelessWidget {
   final Future<bool> Function(int catId, String name, CatProfile profile) onUpdateCat;
   final Future<bool> Function(int catId, int portionGrams) onFeedNow;
   final VoidCallback onProfileChanged;
+  final VoidCallback onAddCat;
 
   const _DashboardTab({
     required this.cat,
@@ -280,6 +287,7 @@ class _DashboardTab extends StatelessWidget {
     required this.onUpdateCat,
     required this.onFeedNow,
     required this.onProfileChanged,
+    required this.onAddCat,
   });
 
   Future<void> _openEditProfile(BuildContext context) async {
@@ -356,14 +364,12 @@ class _DashboardTab extends StatelessWidget {
                             HapticFeedback.vibrate();
                           }
                           Navigator.pop(sheetContext);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                ok
-                                    ? '${AppStrings.t('fed_success_prefix')}$selectedPortion${AppStrings.t('fed_success_for')}${cat!.name}! 🐾'
-                                    : AppStrings.t('feed_failed'),
-                              ),
-                            ),
+                          FeedbackOverlay.show(
+                            context,
+                            success: ok,
+                            message: ok
+                                ? '${AppStrings.t('fed_success_prefix')}$selectedPortion${AppStrings.t('fed_success_for')}${cat!.name}! 🐾'
+                                : AppStrings.t('feed_failed'),
                           );
                         },
                   child: isFeeding
@@ -397,7 +403,18 @@ class _DashboardTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (cat == null) {
-      return Center(child: Text(AppStrings.t('no_cat_dashboard')));
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: EmptyState(
+            icon: Icons.pets_rounded,
+            title: AppStrings.t('no_cats_yet'),
+            subtitle: AppStrings.t('no_cat_dashboard'),
+            actionLabel: AppStrings.t('add_cat_title'),
+            onAction: onAddCat,
+          ),
+        ),
+      );
     }
 
     final todayGrams = (summary?['todayGrams'] as int?) ?? 0;
@@ -541,6 +558,8 @@ class _MiniSparkline extends StatelessWidget {
   final Color color;
   const _MiniSparkline({required this.color});
 
+  static const List<double> _pattern = [0.35, 0.55, 0.45, 0.7, 0.9, 0.65];
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -549,11 +568,22 @@ class _MiniSparkline extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisAlignment: MainAxisAlignment.end,
-        children: List.generate(6, (i) {
-          final h = 8.0 + (i % 4) * 6.0;
+        children: List.generate(_pattern.length, (i) {
+          final isLast = i == _pattern.length - 1;
           return Padding(
             padding: const EdgeInsets.only(left: 3),
-            child: Container(width: 6, height: h, decoration: BoxDecoration(color: color.withOpacity(0.35), borderRadius: BorderRadius.circular(3))),
+            child: Container(
+              width: 6,
+              height: 6 + _pattern[i] * 26,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: isLast ? [color.withOpacity(0.7), color] : [color.withOpacity(0.18), color.withOpacity(0.32)],
+                ),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
           );
         }),
       ),
@@ -564,7 +594,8 @@ class _MiniSparkline extends StatelessWidget {
 // ================= CARE LIST PODTAB =================
 class _CareListTab extends StatefulWidget {
   final Cat? cat;
-  const _CareListTab({required this.cat});
+  final VoidCallback onAddCat;
+  const _CareListTab({required this.cat, required this.onAddCat});
 
   @override
   State<_CareListTab> createState() => _CareListTabState();
@@ -692,10 +723,40 @@ class _CareListTabState extends State<_CareListTab> {
   @override
   Widget build(BuildContext context) {
     if (widget.cat == null) {
-      return Center(child: Text(AppStrings.t('no_cat_care_list')));
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: EmptyState(
+            icon: Icons.checklist_rounded,
+            title: AppStrings.t('no_cats_yet'),
+            subtitle: AppStrings.t('no_cat_care_list'),
+            actionLabel: AppStrings.t('add_cat_title'),
+            onAction: widget.onAddCat,
+          ),
+        ),
+      );
     }
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(18, 20, 18, 24),
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: const [SkeletonBox(height: 18, width: 110), SkeletonBox(height: 14, width: 60)],
+          ),
+          const SizedBox(height: 10),
+          SkeletonBox(height: 8, borderRadius: BorderRadius.circular(100)),
+          const SizedBox(height: 22),
+          const SkeletonBox(height: 16, width: 90),
+          const SizedBox(height: 12),
+          SkeletonBox(height: 66, borderRadius: BorderRadius.circular(16)),
+          const SizedBox(height: 12),
+          SkeletonBox(height: 66, borderRadius: BorderRadius.circular(16)),
+          const SizedBox(height: 12),
+          SkeletonBox(height: 66, borderRadius: BorderRadius.circular(16)),
+        ],
+      );
     }
 
     final doneCount = _items.where((e) => e.done).length;
