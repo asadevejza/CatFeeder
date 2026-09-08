@@ -6,6 +6,9 @@ on:
 jobs:
   build:
     runs-on: macos-14
+    defaults:
+      run:
+        working-directory: CatFeeder # Promijeni ako se Flutter folder zove npr. CatFeederMobile
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -16,14 +19,10 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Install CocoaPods & Dependencies
-        run: |
-          flutter pub get
-          cd ios
-          pod install --repo-update || true
-          cd ..
+      - name: Install Dependencies
+        run: flutter pub get
 
-      - name: Build Unsigned IPA
+      - name: Build Unsigned iOS App
         run: flutter build ios --release --no-codesign
 
       - name: Package IPA
@@ -37,4 +36,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: CatFeeder-IPA
-          path: build/ios/ipa/CatFeeder.ipa
+          path: ${{ github.workspace }}/CatFeeder/build/ios/ipa/CatFeeder.ipa
