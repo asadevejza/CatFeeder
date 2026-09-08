@@ -5,25 +5,31 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          cache: true
 
-      - name: Install Dependencies
-        run: flutter pub get
+      - name: Install CocoaPods & Dependencies
+        run: |
+          flutter pub get
+          cd ios
+          pod install --repo-update || true
+          cd ..
 
       - name: Build Unsigned IPA
-        run: flutter build ipa --no-codesign
+        run: flutter build ios --release --no-codesign
 
-      - name: Create Payload Folder
+      - name: Package IPA
         run: |
           mkdir -p build/ios/ipa/Payload
-          mv build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app build/ios/ipa/Payload/
+          cp -R build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
           cd build/ios/ipa
           zip -r CatFeeder.ipa Payload
 
