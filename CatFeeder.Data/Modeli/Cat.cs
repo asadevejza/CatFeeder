@@ -7,6 +7,10 @@ namespace CatFeeder.Data.Modeli
     public class Cat
     {
         public int Id { get; set; }
+
+        // Kome pripada ova mačka — bez ovoga svi korisnici vide iste mačke.
+        public int UserId { get; set; }
+
         public string Name { get; set; } = string.Empty;
         public string? RfidTag { get; set; }
 

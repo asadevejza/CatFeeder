@@ -4,6 +4,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 enum CareDetailType { none, time, amount }
 
+// Const mapa taskId -> ikonica. Ovo omogućava da se ikonica UVIJEK izvede
+// iz konstante (poznate u compile-time-u), nikad iz broja učitanog iz JSON-a
+// — inače release build (tree-shaking ikonica) puca.
+const Map<String, IconData> _iconByTaskId = {
+  'play': Icons.sports_baseball_rounded,
+  'feed': Icons.icecream_rounded,
+  'litter': Icons.cleaning_services_rounded,
+  'groom': Icons.brush_rounded,
+  'water': Icons.water_drop_rounded,
+};
+
+const IconData _fallbackIcon = Icons.pets;
+
 // Jedna stavka na "Care List" za određenu mačku i dan (npr. "Vrijeme igre"
 // u 18:00, ili "Nahrani suhom hranom" - 1/2 šolje). instanceId je jedinstven
 // po stavci, tako da isti tip zadatka (npr. hranjenje) može biti dodan
@@ -42,7 +55,7 @@ class CareItem {
         'instanceId': instanceId,
         'taskId': taskId,
         'title': title,
-        'icon': icon.codePoint,
+        // icon se više NE čuva - izvodi se iz taskId-a pri učitavanju
         'detailType': detailType.index,
         'done': done,
         'detail': detail,
@@ -52,7 +65,7 @@ class CareItem {
         instanceId: j['instanceId'] as String,
         taskId: j['taskId'] as String,
         title: j['title'] as String,
-        icon: IconData(j['icon'] as int, fontFamily: 'MaterialIcons'),
+        icon: _iconByTaskId[j['taskId'] as String] ?? _fallbackIcon,
         detailType: CareDetailType.values[(j['detailType'] as int?) ?? 0],
         done: j['done'] as bool? ?? false,
         detail: j['detail'] as String?,

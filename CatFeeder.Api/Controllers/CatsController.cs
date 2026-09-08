@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using CatFeeder.Data.Modeli;
 using CatFeeder.Servis.Servisi;
@@ -16,6 +17,10 @@ namespace CatFeeder.Api.Controllers
             _catServis = catServis;
         }
 
+        // Id ulogovanog korisnika iz JWT tokena (postavljen u AuthController.BuildToken).
+        private int CurrentUserId =>
+            int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub")!);
+
         private static CatDto ToDto(Cat cat) => new(
             cat.Id, cat.Name, cat.RfidTag, cat.Sex, cat.BirthDate, cat.Breed,
             cat.IsNeutered, cat.WeightKg, cat.Personality, cat.Goals
@@ -24,14 +29,14 @@ namespace CatFeeder.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<List<CatDto>>> GetCats()
         {
-            var cats = await _catServis.GetAllAsync();
+            var cats = await _catServis.GetAllForUserAsync(CurrentUserId);
             return cats.Select(ToDto).ToList();
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<CatDto>> GetCat(int id)
         {
-            var cat = await _catServis.GetByIdAsync(id);
+            var cat = await _catServis.GetByIdForUserAsync(id, CurrentUserId);
             if (cat == null) return NotFound();
             return ToDto(cat);
         }
@@ -44,6 +49,7 @@ namespace CatFeeder.Api.Controllers
 
             var cat = new Cat
             {
+                UserId = CurrentUserId,
                 Name = dto.Name,
                 RfidTag = dto.RfidTag,
                 Sex = dto.Sex,
@@ -65,7 +71,7 @@ namespace CatFeeder.Api.Controllers
             if (string.IsNullOrWhiteSpace(dto.Name))
                 return BadRequest(new { error = "Ime mačke je obavezno." });
 
-            var existing = await _catServis.GetByIdAsync(id);
+            var existing = await _catServis.GetByIdForUserAsync(id, CurrentUserId);
             if (existing == null) return NotFound();
 
             existing.Name = dto.Name;
@@ -85,7 +91,7 @@ namespace CatFeeder.Api.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCat(int id)
         {
-            var cat = await _catServis.GetByIdAsync(id);
+            var cat = await _catServis.GetByIdForUserAsync(id, CurrentUserId);
             if (cat == null) return NotFound();
 
             await _catServis.ObrisiAsync(cat);

@@ -1,0 +1,34 @@
+name: iOS Unsigned Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Unsigned IPA
+        run: flutter build ipa --no-codesign
+
+      - name: Create Payload Folder
+        run: |
+          mkdir -p build/ios/ipa/Payload
+          mv build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app build/ios/ipa/Payload/
+          cd build/ios/ipa
+          zip -r CatFeeder.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CatFeeder-IPA
+          path: build/ios/ipa/CatFeeder.ipa
