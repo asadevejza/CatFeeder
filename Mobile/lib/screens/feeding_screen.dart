@@ -25,7 +25,7 @@ class FeedingScreen extends StatefulWidget {
   final void Function(int grams) onFedSuccess;
   final Map<int, Map<String, dynamic>> feedingSummaryByCat;
   final VoidCallback onCatsChanged;
-final Future<bool> Function(String name, CatProfile profile) onAddCat;
+ final Future<int?> Function(String name, CatProfile profile) onAddCat;
 
   const FeedingScreen({
     super.key,

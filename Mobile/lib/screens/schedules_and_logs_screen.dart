@@ -410,7 +410,7 @@ class _WeeklyFeedingChart extends StatelessWidget {
                   barTouchData: BarTouchData(
                     touchTooltipData: BarTouchTooltipData(
                       getTooltipColor: (_) => AppColors.primary,
-                      tooltipRoundedRadius: 10,
+                      tooltipBorderRadius: BorderRadius.circular(10),
                       getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
                         '${rod.toY.toStringAsFixed(0)}g',
                         const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),

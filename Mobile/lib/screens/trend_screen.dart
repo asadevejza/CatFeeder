@@ -323,7 +323,7 @@ class _TrendScreenState extends State<TrendScreen> {
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
             getTooltipColor: (_) => _color,
-            tooltipRoundedRadius: 10,
+           tooltipBorderRadius: BorderRadius.circular(10),
             getTooltipItems: (spots) => spots
                 .map((s) => LineTooltipItem('${s.y.toStringAsFixed(1)} $_unit', const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)))
                 .toList(),
@@ -371,7 +371,7 @@ class _TrendScreenState extends State<TrendScreen> {
         barTouchData: BarTouchData(
           touchTooltipData: BarTouchTooltipData(
             getTooltipColor: (_) => _color,
-            tooltipRoundedRadius: 10,
+            tooltipBorderRadius: BorderRadius.circular(10),
             getTooltipItem: (group, groupIndex, rod, rodIndex) =>
                 BarTooltipItem('${rod.toY.toStringAsFixed(0)} $_unit', const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
           ),
