@@ -8,6 +8,7 @@ import '../services/notification_service.dart';
 import '../services/profile_service.dart';
 import '../services/cat_avatar_service.dart';
 import '../services/locale_service.dart';
+import '../services/auth_service.dart';
 import '../localization/app_strings.dart';
 import '../models/cat_profile.dart';
 import '../theme/app_colors.dart';
@@ -63,10 +64,21 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     LocaleService.getLocale().then((code) => AppStrings.locale.value = code);
   }
 
+  // Token je istekao ili je nevažeći — vrati na ekran za prijavu umjesto
+  // beskonačnog "nema konekcije" banera.
+  Future<void> _handleUnauthorized() async {
+    await AuthService.logout();
+    widget.onLogout?.call();
+  }
+
   Future<void> fetchSensorData() async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/sensorreadings'), headers: apiHeaders());
       if (!mounted) return;
+      if (response.statusCode == 401) {
+        await _handleUnauthorized();
+        return;
+      }
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         if (data.isNotEmpty) {
@@ -124,6 +136,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     try {
       final response = await http.get(Uri.parse('$baseUrl/cats'), headers: apiHeaders());
       if (!mounted) return;
+      if (response.statusCode == 401) {
+        await _handleUnauthorized();
+        return;
+      }
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         final loaded = data.map((c) => Cat.fromJson(c as Map<String, dynamic>)).toList();

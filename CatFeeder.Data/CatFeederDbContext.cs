@@ -13,5 +13,16 @@ namespace CatFeeder.Data
         public DbSet<FeedingSchedule> FeedingSchedules { get; set; }
         public DbSet<FeedingLog> FeedingLogs { get; set; }
         public DbSet<SensorReading> SensorReadings { get; set; }
+        public DbSet<User> Users { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            // Korisničko ime mora biti jedinstveno na nivou baze, ne samo provjereno u kodu.
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.Username)
+                .IsUnique();
+        }
     }
 }

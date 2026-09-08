@@ -4,9 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'services/settings_service.dart';
 import 'services/notification_service.dart';
-import 'services/profile_service.dart';
+import 'services/auth_service.dart';
 import 'screens/main_navigation_screen.dart';
-import 'screens/welcome_screen.dart';
+import 'screens/auth_screen.dart';
 import 'theme/app_colors.dart';
 
 class MyHttpOverrides extends HttpOverrides {
@@ -104,8 +104,9 @@ class CatFeederApp extends StatelessWidget {
   }
 }
 
-// Provjerava da li je "welcome" korak odrađen (ime unešeno) i prebacuje
-// između welcome ekrana i glavne aplikacije, bez pravog restarta app-a.
+// Provjerava da li je korisnik prijavljen (validan JWT sačuvan lokalno) i
+// prebacuje između ekrana za prijavu i glavne aplikacije, bez pravog
+// restarta app-a.
 class _AppRoot extends StatefulWidget {
   const _AppRoot();
 
@@ -114,7 +115,7 @@ class _AppRoot extends StatefulWidget {
 }
 
 class _AppRootState extends State<_AppRoot> {
-  bool? _showWelcome;
+  bool? _isLoggedIn;
   String? _baseUrl;
 
   @override
@@ -125,28 +126,28 @@ class _AppRootState extends State<_AppRoot> {
 
   Future<void> _load() async {
     final baseUrl = await SettingsService.loadBaseUrl();
-    final onboardingDone = await ProfileService.isOnboardingComplete();
+    await AuthService.loadFromStorage();
     if (!mounted) return;
     setState(() {
       _baseUrl = baseUrl;
-      _showWelcome = !onboardingDone;
+      _isLoggedIn = AuthService.isLoggedIn;
     });
   }
 
-  void _handleWelcomeComplete() => setState(() => _showWelcome = false);
+  void _handleAuthSuccess() => setState(() => _isLoggedIn = true);
 
-  void _handleLogout() => setState(() => _showWelcome = true);
+  void _handleLogout() => setState(() => _isLoggedIn = false);
 
   @override
   Widget build(BuildContext context) {
-    if (_showWelcome == null || _baseUrl == null) {
+    if (_isLoggedIn == null || _baseUrl == null) {
       return const Scaffold(
         backgroundColor: AppColors.background,
         body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
       );
     }
-    if (_showWelcome == true) {
-      return WelcomeScreen(onComplete: _handleWelcomeComplete);
+    if (_isLoggedIn == false) {
+      return AuthScreen(baseUrl: _baseUrl!, onSuccess: _handleAuthSuccess);
     }
     return MainNavigationScreen(initialBaseUrl: _baseUrl!, onLogout: _handleLogout);
   }

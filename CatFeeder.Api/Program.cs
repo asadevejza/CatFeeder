@@ -1,8 +1,12 @@
 using CatFeeder.Data;
 using CatFeeder.Servis.Servisi;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,7 +17,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls("http://0.0.0.0:5103");
 
 // Add services to the container.
-builder.Services.AddControllers()
+builder.Services.AddControllers(options =>
+    {
+        // Svaki kontroler je zaštićen (traži važeći JWT) osim ako eksplicitno
+        // ima [AllowAnonymous] (npr. AuthController - register/login).
+        options.Filters.Add(new AuthorizeFilter());
+    })
     .AddJsonOptions(options =>
     {
         // Sigurnosna mreža: ako ikad učitaš povezane objekte (Cat -> FeedingLogs -> Cat...),
@@ -40,11 +49,36 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Prijava korisnika (register/login) izdaje JWT token; svaki sljedeći poziv
+// mora nositi "Authorization: Bearer <token>" header da prođe autorizaciju.
+var jwtSecret = builder.Configuration["Jwt:Secret"]
+    ?? throw new InvalidOperationException(
+        "Jwt:Secret nije podešen u appsettings.json. Dodaj npr. \"Jwt\": { \"Secret\": \"...\" } prije pokretanja.");
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "CatFeederApi";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
+            ValidateAudience = true,
+            ValidAudience = jwtIssuer,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(2),
+        };
+    });
+builder.Services.AddAuthorization();
+
 // Servisni sloj registrovan kroz DI umjesto ručnog "new" u svakom kontroleru
 builder.Services.AddScoped<CatServis>();
 builder.Services.AddScoped<FeedingLogServis>();
 builder.Services.AddScoped<FeedingScheduleServis>();
 builder.Services.AddScoped<SensorReadingServis>();
+builder.Services.AddScoped<UserServis>();
 
 var app = builder.Build();
 
@@ -109,6 +143,7 @@ app.Use(async (context, next) =>
     await next();
 });
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

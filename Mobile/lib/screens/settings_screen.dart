@@ -4,6 +4,7 @@ import '../models/cat.dart';
 import '../models/cat_profile.dart';
 import '../services/cat_avatar_service.dart';
 import '../services/profile_service.dart';
+import '../services/auth_service.dart';
 import '../services/locale_service.dart';
 import '../localization/app_strings.dart';
 import '../theme/app_colors.dart';
@@ -39,14 +40,12 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   Map<int, String> avatarPaths = {};
   Map<int, CatProfile> profiles = {};
-  String? ownerName;
 
   @override
   void initState() {
     super.initState();
     _loadAvatars();
     _loadProfiles();
-    _loadOwnerName();
   }
 
   @override
@@ -54,37 +53,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.didUpdateWidget(oldWidget);
     _loadAvatars();
     _loadProfiles();
-  }
-
-  Future<void> _loadOwnerName() async {
-    final name = await ProfileService.getOwnerName();
-    if (!mounted) return;
-    setState(() => ownerName = name);
-  }
-
-  Future<void> _editOwnerName() async {
-    final controller = TextEditingController(text: ownerName ?? '');
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(AppStrings.t('edit_name_title')),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-          decoration: InputDecoration(hintText: AppStrings.t('your_name_hint')),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(AppStrings.t('cancel'))),
-          TextButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: Text(AppStrings.t('save'))),
-        ],
-      ),
-    );
-    if (result == null || result.isEmpty) return;
-    await ProfileService.saveOwnerName(result);
-    if (!mounted) return;
-    setState(() => ownerName = result);
   }
 
   Future<void> _loadAvatars() async {
@@ -145,10 +113,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             children: [
               const SizedBox(height: 12),
-              InkWell(
-                borderRadius: BorderRadius.circular(24),
-                onTap: _editOwnerName,
-                child: Container(
+              Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
@@ -172,17 +137,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(ownerName?.trim().isNotEmpty == true ? ownerName! : AppStrings.t('user'),
+                          Text(AuthService.currentUsername?.trim().isNotEmpty == true ? AuthService.currentUsername! : AppStrings.t('user'),
                               style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: Colors.white)),
                           const SizedBox(height: 4),
                           Text(AppStrings.t('welcome_back'), style: const TextStyle(fontSize: 12, color: Colors.white70)),
                         ],
                       ),
                     ),
-                    Icon(Icons.edit_rounded, color: Colors.white.withOpacity(0.8), size: 20),
                   ],
                 ),
-              ),
               ),
               const SizedBox(height: 30),
               Row(
@@ -363,7 +326,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     );
                     if (confirm == true) {
-                      await ProfileService.logout();
+                      await AuthService.logout();
                       widget.onLogout!();
                     }
                   },

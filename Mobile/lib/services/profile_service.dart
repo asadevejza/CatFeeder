@@ -2,42 +2,12 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/cat_profile.dart';
 
-// Čuva korisnički profil (ime vlasnika) i prošireni profil svake mačke
-// (spol, rasa, godine, težina) lokalno na telefonu — sve sa uvodnog
-// ekrana (onboarding) prilikom prvog pokretanja aplikacije.
+// Čuva prošireni profil svake mačke (spol, rasa, godine, težina, dnevni
+// cilj) lokalno na telefonu — polja koja backend trenutno ne prati.
+// Prijava/registracija korisnika je preseljena u AuthService (pravi
+// backend nalog sa JWT-om).
 class ProfileService {
-  static const _onboardingCompleteKey = 'onboarding_complete';
-  static const _ownerNameKey = 'owner_name';
   static const _catProfilesKey = 'cat_profiles_v1';
-
-  static Future<bool> isOnboardingComplete() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_onboardingCompleteKey) ?? false;
-  }
-
-  static Future<void> setOnboardingComplete() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_onboardingCompleteKey, true);
-  }
-
-  // Odjava — vraća na welcome ekran i briše samo ime vlasnika. Ne dira
-  // mačke, rasporede, historiju ni adresu servera (to su podaci hranilice,
-  // ne "korisničkog naloga" — backend nema pravi sistem naloga).
-  static Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_onboardingCompleteKey);
-    await prefs.remove(_ownerNameKey);
-  }
-
-  static Future<String?> getOwnerName() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_ownerNameKey);
-  }
-
-  static Future<void> saveOwnerName(String name) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_ownerNameKey, name);
-  }
 
   static Future<Map<int, CatProfile>> getAllCatProfiles() async {
     final prefs = await SharedPreferences.getInstance();

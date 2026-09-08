@@ -48,7 +48,7 @@ class _ServerAddressScreenState extends State<ServerAddressScreen> {
     });
     try {
       final response = await http
-          .get(Uri.parse('$_cleanedUrl/cats'), headers: apiHeaders())
+          .get(Uri.parse('$_cleanedUrl/health'), headers: apiHeaders())
           .timeout(const Duration(seconds: 5));
       if (!mounted) return;
       setState(() {
