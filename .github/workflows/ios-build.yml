@@ -16,14 +16,18 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Build Unsigned iOS App
-        run: flutter build ios --release --no-codesign
-
-      - name: Package IPA
+      - name: Locate Flutter Project & Build
         run: |
+          # Pronađi folder u kom se nalazi pubspec.yaml
+          FLUTTER_DIR=$(dirname $(find . -maxdepth 3 -name "pubspec.yaml" -print -quit))
+          echo "Pronađen Flutter projekat u: $FLUTTER_DIR"
+          cd "$FLUTTER_DIR"
+          
+          # Pokreni install i build
+          flutter pub get
+          flutter build ios --release --no-codesign
+          
+          # Zapakuj IPA fajl
           mkdir -p build/ios/ipa/Payload
           cp -R build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
           cd build/ios/ipa
@@ -33,4 +37,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: CatFeeder-IPA
-          path: build/ios/ipa/CatFeeder.ipa
+          path: "**/build/ios/ipa/CatFeeder.ipa"
