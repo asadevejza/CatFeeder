@@ -6,9 +6,6 @@ on:
 jobs:
   build:
     runs-on: macos-14
-    defaults:
-      run:
-        working-directory: CatFeeder # Promijeni ako se Flutter folder zove npr. CatFeederMobile
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -36,4 +33,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: CatFeeder-IPA
-          path: ${{ github.workspace }}/CatFeeder/build/ios/ipa/CatFeeder.ipa
+          path: build/ios/ipa/CatFeeder.ipa
