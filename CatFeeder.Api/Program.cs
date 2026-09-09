@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 using Scalar.AspNetCore;
 using System.Text;
 
@@ -26,7 +27,7 @@ builder.Services.AddControllers(options =>
 
 builder.Services.AddOpenApi();
 
-// Priprema i konverzija connection stringa za Npgsql (PostgreSQL)
+// Priprema i robusnija konverzija connection stringa za Npgsql (PostgreSQL)
 var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? Environment.GetEnvironmentVariable("DATABASE_URL");
 
@@ -37,17 +38,27 @@ if (string.IsNullOrEmpty(rawConnectionString))
 
 string connString = rawConnectionString;
 
-// Ako konekcija dolazi u postgresql:// URL formatu (sa Railway-a), parsiramo je u Npgsql Format
 if (rawConnectionString.StartsWith("postgres://") || rawConnectionString.StartsWith("postgresql://"))
 {
     var databaseUri = new Uri(rawConnectionString);
-    var userInfo = databaseUri.UserInfo.Split(':');
+    var userInfo = databaseUri.UserInfo.Split(':', 2);
 
-    connString = $"Host={databaseUri.Host};Port={databaseUri.Port};Database={databaseUri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true;";
+    var builderConn = new NpgsqlConnectionStringBuilder
+    {
+        Host = databaseUri.Host,
+        Port = databaseUri.Port > 0 ? databaseUri.Port : 5432,
+        Username = Uri.UnescapeDataString(userInfo[0]),
+        Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty,
+        Database = databaseUri.AbsolutePath.TrimStart('/'),
+        SslMode = SslMode.Require,
+        TrustServerCertificate = true
+    };
+
+    connString = builderConn.ToString();
 }
 
 builder.Services.AddDbContext<CatFeederDbContext>(options =>
-    options.UseNpgsql(connString));
+    options.UseNpgsql(connString, b => b.MigrationsAssembly(typeof(CatFeederDbContext).Assembly.FullName)));
 
 builder.Services.AddCors(options =>
 {
