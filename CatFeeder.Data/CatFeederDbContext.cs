@@ -14,6 +14,7 @@ namespace CatFeeder.Data
         public DbSet<FeedingLog> FeedingLogs { get; set; }
         public DbSet<SensorReading> SensorReadings { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<WeightLog> WeightLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

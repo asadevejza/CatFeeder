@@ -1,7 +1,8 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../api_config.dart';
 
-// Čuva historiju težine (datum -> kg) po mački lokalno na telefonu.
 class WeightHistoryService {
   static const _keyPrefix = 'weight_history_';
 
@@ -21,7 +22,28 @@ class WeightHistoryService {
     await prefs.setString('$_keyPrefix$catId', json.encode(data));
   }
 
-  // Vraća zadnjih [days] dana (uključujući danas), sortirano hronološki.
+  // Sinhronizacija sa backendom pri pokretanju ili učitavanju
+  static Future<void> syncWithServer(int catId, String baseUrl) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/Weights/cat/$catId'),
+        headers: apiHeaders(),
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> serverLogs = json.decode(response.body);
+        final Map<String, double> localData = {};
+        for (var log in serverLogs) {
+          final dateStr = log['date'].toString().substring(0, 10); // YYYY-MM-DD
+          final weight = (log['weightKg'] as num).toDouble();
+          localData[dateStr] = weight;
+        }
+        await _save(catId, localData);
+      }
+    } catch (_) {
+      // Ako nema konekcije, oslanjamo se na lokalni keš
+    }
+  }
+
   static Future<List<MapEntry<DateTime, double?>>> lastDays(int catId, int days) async {
     final data = await _load(catId);
     final today = DateTime.now();
@@ -33,23 +55,31 @@ class WeightHistoryService {
     return result;
   }
 
-  static Future<void> logWeight(int catId, double weightKg, {DateTime? day}) async {
+  static Future<void> logWeight(int catId, double weightKg, {DateTime? day, String? baseUrl}) async {
+    final targetDate = day ?? DateTime.now();
     final data = await _load(catId);
-    data[_dateKey(day ?? DateTime.now())] = weightKg;
+    data[_dateKey(targetDate)] = weightKg;
     await _save(catId, data);
-  }
 
-  static Future<void> seedIfEmpty(int catId, double weightKg) async {
+    // Pošalji i na backend ako je proslijeđen baseUrl
+    if (baseUrl != null) {
+      try {
+        await http.post(
+          Uri.parse('$baseUrl/Weights'),
+          headers: apiHeaders(withJsonBody: true),
+          body: json.encode({'catId': catId, 'weightKg': weightKg}),
+        );
+      } catch (_) {
+        // Ignoriši grešku u mreži, sačuvano je lokalno
+      }
+    }
+  }
+static Future<void> seedIfEmpty(int catId, double weightKg) async {
     final data = await _load(catId);
     if (data.isEmpty) {
       await logWeight(catId, weightKg);
     }
   }
-
-  // Vraća najnoviju težinu:
-  // 1. Ako postoji unos za danas -> vrati njega.
-  // 2. Ako nema za danas, ali ima u historiji -> vrati zadnji unijeti.
-  // 3. Ako je historija potpuno prazna -> zabilježi fallbackWeight (s backenda) i vrati ga.
   static Future<double?> getLatestWeight(int catId, double? fallbackWeight) async {
     final data = await _load(catId);
 
