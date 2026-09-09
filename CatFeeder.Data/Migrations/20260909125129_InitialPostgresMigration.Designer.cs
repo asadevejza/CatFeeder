@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CatFeeder.Data.Migrations
 {
     [DbContext(typeof(CatFeederDbContext))]
-    [Migration("20260909123930_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260909125129_InitialPostgresMigration")]
+    partial class InitialPostgresMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
