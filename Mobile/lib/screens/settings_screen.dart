@@ -7,10 +7,10 @@ class SettingsScreen extends StatefulWidget {
   final String baseUrl;
   final List<dynamic> cats;
   final VoidCallback onCatsChanged;
-  final dynamic onAddCat;
-  final dynamic onUpdateCat;
-  final dynamic onDeleteCat;
-  final Future<void> Function(String newUrl) onSaveBaseUrl;
+  final VoidCallback onAddCat;
+  final Function(dynamic) onUpdateCat;
+  final Function onDeleteCat;
+  final Function(String) onSaveBaseUrl;
   final VoidCallback? onLogout;
 
   const SettingsScreen({
@@ -30,11 +30,58 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  void _showAboutDialog(bool isEn) {
+    showAboutDialog(
+      context: context,
+      applicationName: 'CatFeeder',
+      applicationVersion: '1.0.0',
+      applicationIcon: const Icon(Icons.pets, size: 40, color: AppColors.primary),
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 15.0),
+          child: Text(
+            isEn
+                ? 'Smart cat feeder management application.'
+                : 'Aplikacija za upravljanje pametnom hranilicom za mačke.',
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showNotificationsDialog(bool isEn) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.notifications_active, color: AppColors.primary),
+            const SizedBox(width: 10),
+            Text(isEn ? 'Notifications' : 'Notifikacije'),
+          ],
+        ),
+        content: Text(
+          isEn
+              ? 'Notification settings are enabled. You will receive alerts when food level is low.'
+              : 'Notifikacije su uključene. Primat ćete upozorenja kada nivo hrane bude nizak.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<String>(
       valueListenable: AppStrings.locale,
-      builder: (context, _, __) {
+      builder: (context, currentLang, __) {
+        final isEn = currentLang == 'en';
+
         return Scaffold(
           backgroundColor: const Color(0xFFF4F6F0),
           body: SafeArea(
@@ -69,9 +116,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const Text(
-                              'Dobrodošao nazad! 👋',
-                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                            Text(
+                              isEn ? 'Welcome back! 👋' : 'Dobrodošao nazad! 👋',
+                              style: const TextStyle(color: Colors.white70, fontSize: 12),
                             ),
                           ],
                         ),
@@ -85,36 +132,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Moje mačke',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+                      Text(
+                        isEn ? 'My Cats' : 'Moje mačke',
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
                       ),
-                     TextButton.icon(
-                      onPressed: widget.onAddCat, // Sada poklapa VoidCallback?
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Dodaj'),
-),
+                      TextButton.icon(
+                        onPressed: widget.onAddCat,
+                        icon: const Icon(Icons.add, size: 18),
+                        label: Text(isEn ? 'Add' : 'Dodaj'),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
 
-                  ...widget.cats.map((cat) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: _buildCardTile(
-                          icon: Icons.pets,
-                          title: cat.name,
-                          onTap: () {},
-                        ),
-                      )),
+                  ...widget.cats.map((cat) {
+                    final catName = (cat is Map) ? (cat['name'] ?? 'Mačka') : (cat.name ?? 'Mačka');
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: _buildCardTile(
+                        icon: Icons.pets,
+                        title: catName.toString(),
+                        onTap: () => widget.onUpdateCat(cat),
+                      ),
+                    );
+                  }),
 
                   const SizedBox(height: 16),
 
                   // Notifikacije
                   _buildCardTile(
                     icon: Icons.notifications_outlined,
-                    title: 'Notifikacije',
-                    subtitle: 'Podsjetnici i upozorenja o niskom nivou',
-                    onTap: () {},
+                    title: isEn ? 'Notifications' : 'Notifikacije',
+                    subtitle: isEn ? 'Reminders and low level alerts' : 'Podsjetnici i upozorenja o niskom nivou',
+                    onTap: () => _showNotificationsDialog(isEn),
                   ),
                   const SizedBox(height: 8),
 
@@ -129,9 +179,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         const Icon(Icons.language, color: AppColors.primary),
                         const SizedBox(width: 16),
-                        const Text(
-                          'Jezik',
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                        Text(
+                          isEn ? 'Language' : 'Jezik',
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                         ),
                         const Spacer(),
                         SegmentedButton<String>(
@@ -152,9 +202,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   // O aplikaciji
                   _buildCardTile(
                     icon: Icons.info_outline,
-                    title: 'O aplikaciji',
-                    subtitle: 'Verzija, licenca, o projektu',
-                    onTap: () {},
+                    title: isEn ? 'About' : 'O aplikaciji',
+                    subtitle: isEn ? 'Version, license, about project' : 'Verzija, licenca, o projektu',
+                    onTap: () => _showAboutDialog(isEn),
                   ),
                   const SizedBox(height: 8),
 
@@ -162,7 +212,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _buildCardTile(
                     icon: Icons.logout,
                     iconColor: Colors.red,
-                    title: 'Odjava',
+                    title: isEn ? 'Logout' : 'Odjava',
                     titleColor: Colors.red,
                     onTap: widget.onLogout ?? () {},
                   ),

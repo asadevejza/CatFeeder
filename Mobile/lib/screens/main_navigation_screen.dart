@@ -17,6 +17,7 @@ import 'device_screen.dart';
 import 'care_screen.dart';
 import 'services_screen.dart';
 import 'settings_screen.dart';
+import 'add_cat_screen.dart'; // Dodan uvoz za AddCatScreen
 
 // ================= GLAVNA NAVIGACIJA + DIJELJENO STANJE =================
 class MainNavigationScreen extends StatefulWidget {
@@ -35,7 +36,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   // --- Dijeljeno stanje, vidljivo svim ekranima ---
   double foodLevel = 100.0;
-  double? waterLevel; // null dok ESP32 ne počne slati očitavanja
+  double? waterLevel;
   double temp = 0.0;
   double humidity = 0.0;
   bool isLoadingDashboard = true;
@@ -44,14 +45,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int? selectedCatId;
   bool isLoadingCats = true;
 
-  // Svaki uspješan feed povećava ovaj brojač — animirana mačka to koristi kao okidač
   int feedTrigger = 0;
-
-  // Prati da li je upozorenje o niskom nivou već prikazano
   bool _foodAlertActive = false;
   bool _waterAlertActive = false;
-
-  // Prikazuje baner kad backend nije dostupan (pogrešna adresa, nema mreže...)
   bool connectionError = false;
 
   @override
@@ -64,8 +60,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     LocaleService.getLocale().then((code) => AppStrings.locale.value = code);
   }
 
-  // Token je istekao ili je nevažeći — vrati na ekran za prijavu umjesto
-  // beskonačnog "nema konekcije" banera.
   Future<void> _handleUnauthorized() async {
     await AuthService.logout();
     widget.onLogout?.call();
@@ -207,9 +201,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
       if (!mounted) return;
       setState(() => feedingSummaryByCat = summary);
-    } catch (_) {
-      // Tiho ne uspije
-    }
+    } catch (_) {}
   }
 
   Future<bool> feedCatNow(int catId, int portionGrams) async {
@@ -285,13 +277,52 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
-  void applyLocalFeedEffect(int grams) {
-    setState(() {
-      final drop = (grams / totalCapacityGrams) * 100;
-      foodLevel = (foodLevel - drop).clamp(0, 100);
-      feedTrigger++;
-    });
-    fetchFeedingSummary();
+  // --- HELPER FUNKCIJE KOJE OTVARAJU FORMU ZA DODAVANJE / UREĐIVANJE ---
+ // --- HELPER FUNKCIJE ZA OTVARANJE EKRANA ZA DODAVANJE / UREĐIVANJE ---
+ // --- HELPER FUNKCIJE ZA OTVARANJE EKRANA ZA DODAVANJE / UREĐIVANJE ---
+// --- HELPER FUNKCIJE ZA OTVARANJE EKRANA ZA DODAVANJE / UREĐIVANJE ---
+// --- HELPER FUNKCIJE ZA OTVARANJE EKRANA ZA DODAVANJE / UREĐIVANJE ---
+  void _openAddCatScreen() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddCatScreen(
+          onSave: (name, profile) async {
+            return await addCat(name, profile);
+          },
+        ),
+      ),
+    );
+    if (result == true || result != null) {
+      fetchCats();
+    }
+  }
+
+  void _openUpdateCatScreen(Cat cat) async {
+    final catProfileData = await ProfileService.getCatProfile(cat.id);
+    if (!mounted) return;
+
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddCatScreen(
+          existingCat: cat,
+          existingProfile: catProfileData,
+          onSave: (name, profile) async {
+            return await addCat(name, profile);
+          },
+          onUpdate: (catId, name, profile) async {
+            return await updateCat(catId, name, profile);
+          },
+          onDelete: () async {
+            return await deleteCat(cat.id);
+          },
+        ),
+      ),
+    );
+    if (result == true || result != null) {
+      fetchCats();
+    }
   }
 
   void selectCat(int catId) {
@@ -331,7 +362,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ),
 
       // 2. Care Tab
-   CareScreen(
+      CareScreen(
         baseUrl: baseUrl,
         cats: cats,
         waterLevel: waterLevel,
@@ -349,13 +380,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         cats: cats,
       ),
 
-      // 4. Me Tab
+      // 4. Me Tab (SettingsScreen)
       SettingsScreen(
         baseUrl: baseUrl,
         cats: cats,
         onCatsChanged: fetchCats,
-        onAddCat: addCat,
-        onUpdateCat: updateCat,
+        onAddCat: _openAddCatScreen,
+        onUpdateCat: (cat) {
+          if (cat is Cat) {
+            _openUpdateCatScreen(cat);
+          } else if (cat is Map<String, dynamic>) {
+            _openUpdateCatScreen(Cat.fromJson(cat));
+          }
+        },
         onDeleteCat: deleteCat,
         onSaveBaseUrl: updateBaseUrl,
         onLogout: widget.onLogout,
@@ -390,22 +427,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               items: [
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.devices_rounded),
-                  activeIcon: _ActiveNavIcon(icon: Icons.devices_rounded),
+                  activeIcon: const _ActiveNavIcon(icon: Icons.devices_rounded),
                   label: AppStrings.t('device'),
                 ),
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.favorite_rounded),
-                  activeIcon: _ActiveNavIcon(icon: Icons.favorite_rounded),
+                  activeIcon: const _ActiveNavIcon(icon: Icons.favorite_rounded),
                   label: AppStrings.t('care'),
                 ),
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.grid_view_rounded),
-                  activeIcon: _ActiveNavIcon(icon: Icons.grid_view_rounded),
+                  activeIcon: const _ActiveNavIcon(icon: Icons.grid_view_rounded),
                   label: AppStrings.t('services'),
                 ),
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.person_rounded),
-                  activeIcon: _ActiveNavIcon(icon: Icons.person_rounded),
+                  activeIcon: const _ActiveNavIcon(icon: Icons.person_rounded),
                   label: AppStrings.t('me'),
                 ),
               ],
