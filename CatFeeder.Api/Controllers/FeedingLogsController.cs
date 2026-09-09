@@ -25,7 +25,7 @@ namespace CatFeeder.Api.Controllers
         public async Task<ActionResult<List<FeedingLogDto>>> GetAll()
         {
             var logs = await _logServis.GetAllAsync();
-            return logs.Select(ToDto).ToList();
+            return Ok(logs.Select(ToDto).ToList());
         }
 
         // 2. Dobavi istoriju hranjenja za tačno određenu mačku
@@ -33,12 +33,12 @@ namespace CatFeeder.Api.Controllers
         public async Task<ActionResult<List<FeedingLogDto>>> GetByCatId(int catId)
         {
             var logs = await _logServis.GetByCatIdAsync(catId);
-            return logs.Select(ToDto).ToList();
+            return Ok(logs.Select(ToDto).ToList());
         }
 
         // 3. Zabilježi novo hranjenje
         [HttpPost]
-        public async Task<ActionResult<FeedingLogDto>> CreateLog(FeedingLogCreateDto dto)
+        public async Task<ActionResult<FeedingLogDto>> CreateLog([FromBody] FeedingLogCreateDto dto)
         {
             if (dto.PortionGrams <= 0)
                 return BadRequest(new { error = "Količina hrane mora biti veća od 0." });
@@ -51,13 +51,14 @@ namespace CatFeeder.Api.Controllers
             {
                 CatId = dto.CatId,
                 PortionGrams = dto.PortionGrams,
-                TriggeredBy = dto.TriggeredBy,
-                Timestamp = dto.Timestamp ?? DateTime.Now,
+                TriggeredBy = string.IsNullOrWhiteSpace(dto.TriggeredBy) ? "Manual" : dto.TriggeredBy,
+                // KORIŠTENJE UTC VREMENA ZA POSTGRESQL ACCURACY:
+                Timestamp = dto.Timestamp?.ToUniversalTime() ?? DateTime.UtcNow
             };
 
             await _logServis.AddAsync(log);
 
-            return CreatedAtAction(nameof(GetAll), new { id = log.Id }, ToDto(log));
+            return Ok(ToDto(log));
         }
     }
 }

@@ -5,12 +5,10 @@ import 'services/auth_service.dart';
 // očitavanje nivoa. Slobodno promijeni na stvarni kapacitet tvog spremnika.
 const int totalCapacityGrams = 2000;
 
-// Adresa backend servera dok se korisnik ne postavi svoju kroz Podešavanja.
-// 10.0.2.2 je specijalna adresa koju Android Emulator koristi za "localhost" računara.
-const String defaultBaseUrl = 'http://10.0.2.2:5103/api';
+// Produkcijska adresa backend servera na Railway-u.
+const String defaultBaseUrl = 'https://catfeeder-production.up.railway.app/api';
 
-// Mora biti IDENTIČAN "ApiKey" vrijednosti u CatFeeder.Api/appsettings.json na backendu.
-// Ako ih promijeniš, promijeni na oba mjesta.
+// Obavezni API Ključ koji odgovara vrijednosti u Railway varijablama.
 const String apiKey = '82fUSgPL8mUSKGoLvUYK1U9Bl7NraNrkbxhLqvgfTvU';
 
 // Headeri koje SVAKI poziv ka backendu mora nositi (X-Api-Key) + Content-Type za pozive sa tijelom.
