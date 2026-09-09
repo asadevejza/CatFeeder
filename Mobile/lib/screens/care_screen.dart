@@ -13,7 +13,7 @@ import '../localization/app_strings.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/feedback_overlay.dart';
 import '../widgets/skeleton_box.dart';
-
+import '../services/weight_history_service.dart';
 const List<String> _mjeseciBs = [
   'jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'avg', 'sep', 'okt', 'nov', 'dec',
 ];
@@ -447,25 +447,33 @@ class _DashboardTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        _OverviewCard(
-          title: AppStrings.t('weight'),
-          trailing: AppStrings.t('trend_7d'),
-          onTrailingTap: () => _openTrend(context, TrendType.weight),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text((profile == null || profile!.weightKg <= 0) ? '--' : profile!.weightKg.toStringAsFixed(1),
-                  style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800)),
-              const Padding(
-                padding: EdgeInsets.only(left: 6, bottom: 6),
-                child: Text('kg', style: TextStyle(fontSize: 14, color: Colors.black45)),
-              ),
-              const Spacer(),
-              _MiniSparkline(color: Colors.green),
-            ],
+       _OverviewCard(
+  title: AppStrings.t('weight'),
+  trailing: AppStrings.t('trend_7d'),
+  onTrailingTap: () => _openTrend(context, TrendType.weight),
+  child: FutureBuilder<double?>(
+    future: WeightHistoryService.getLatestWeight(cat!.id, profile?.weightKg ?? 0.0),
+    builder: (context, snapshot) {
+      final currentWeight = snapshot.data;
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            currentWeight != null ? currentWeight.toStringAsFixed(1) : '--',
+            style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800),
           ),
-        ),
-        const SizedBox(height: 14),
+          const Padding(
+            padding: EdgeInsets.only(left: 6, bottom: 6),
+            child: Text('kg', style: TextStyle(fontSize: 14, color: Colors.black45)),
+          ),
+          const Spacer(),
+          const _MiniSparkline(color: Colors.green),
+        ],
+      );
+    },
+  ),
+),
+            const SizedBox(height: 14),
         _OverviewCard(
           title: AppStrings.t('food_intake'),
           trailing: AppStrings.t('trend_7d'),
