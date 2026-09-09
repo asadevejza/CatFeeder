@@ -1,9 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Čuva historiju težine (datum -> kg) po mački lokalno na telefonu, jer
-// backend trenutno ne prati težinu kroz vrijeme. Sjeme (prvi unos) se
-// pravi automatski sa težinom unesenom na onboarding/dodavanje mačke.
+// Čuva historiju težine (datum -> kg) po mački lokalno na telefonu.
 class WeightHistoryService {
   static const _keyPrefix = 'weight_history_';
 
@@ -24,7 +22,6 @@ class WeightHistoryService {
   }
 
   // Vraća zadnjih [days] dana (uključujući danas), sortirano hronološki.
-  // Dani bez unosa nemaju vrijednost (null) da graf ne izmišlja podatke.
   static Future<List<MapEntry<DateTime, double?>>> lastDays(int catId, int days) async {
     final data = await _load(catId);
     final today = DateTime.now();
@@ -47,5 +44,29 @@ class WeightHistoryService {
     if (data.isEmpty) {
       await logWeight(catId, weightKg);
     }
+  }
+
+  // Vraća najnoviju težinu:
+  // 1. Ako postoji unos za danas -> vrati njega.
+  // 2. Ako nema za danas, ali ima u historiji -> vrati zadnji unijeti.
+  // 3. Ako je historija potpuno prazna -> zabilježi fallbackWeight (s backenda) i vrati ga.
+  static Future<double?> getLatestWeight(int catId, double? fallbackWeight) async {
+    final data = await _load(catId);
+
+    final todayKey = _dateKey(DateTime.now());
+    if (data.containsKey(todayKey)) {
+      return data[todayKey];
+    }
+
+    if (data.isNotEmpty) {
+      return data.values.last;
+    }
+
+    if (fallbackWeight != null && fallbackWeight > 0) {
+      await logWeight(catId, fallbackWeight);
+      return fallbackWeight;
+    }
+
+    return null;
   }
 }
