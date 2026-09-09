@@ -1,0 +1,8 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.git/
+**/.dart_tool/
+Mobile/
+Firmware/
+*.md

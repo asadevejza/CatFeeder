@@ -14,7 +14,10 @@ var builder = WebApplication.CreateBuilder(args);
 // inače telefon na istoj WiFi mreži ne može da mu priđe. Ovo eksplicitno postavljanje je
 // pouzdanije od oslanjanja na launchSettings.json profil, koji Visual Studio ponekad ne
 // primijeni bez potpunog restarta same aplikacije.
-builder.WebHost.UseUrls("http://0.0.0.0:5103");
+// Port: lokalno ostaje 5103, ali cloud platforme (Railway, Render, itd.) dodjeljuju
+// port dinamički kroz PORT env varijablu — moramo je poštovati kad postoji.
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5103";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 // Add services to the container.
 builder.Services.AddControllers(options =>
@@ -81,6 +84,15 @@ builder.Services.AddScoped<SensorReadingServis>();
 builder.Services.AddScoped<UserServis>();
 
 var app = builder.Build();
+
+// Automatski primijeni EF Core migracije pri pokretanju — praktično za hostovanje
+// (Railway/Render), tako da ne moraš ručno pokretati 'dotnet ef database update'
+// protiv udaljene baze svaki put kad dodaš migraciju.
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<CatFeederDbContext>();
+    db.Database.Migrate();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
