@@ -29,15 +29,18 @@ builder.Services.AddOpenApi();
 
 // Priprema i robusnija konverzija connection stringa za Npgsql (PostgreSQL)
 // Priprema i robusnija konverzija connection stringa za Npgsql (PostgreSQL)
-var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? Environment.GetEnvironmentVariable("DATABASE_URL")
+// 1. Direktno čitanje iz varijabli okruženja i konfiguracije
+var rawConnectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
     ?? Environment.GetEnvironmentVariable("DATABASE_PUBLIC_URL")
+    ?? builder.Configuration.GetConnectionString("DefaultConnection")
     ?? builder.Configuration["DATABASE_URL"]
-    ?? builder.Configuration["DATABASE_PUBLIC_URL"];
+    ?? builder.Configuration["ConnectionStrings:DefaultConnection"];
 
+// 2. Ako je i dalje null, ispiši sve dostupne ključeve radi lakše dijagnostike (privremeno)
 if (string.IsNullOrEmpty(rawConnectionString))
 {
-    throw new InvalidOperationException("Connection string za bazu nije pronađen!");
+    var envKeys = string.Join(", ", Environment.GetEnvironmentVariables().Keys.Cast<string>());
+    throw new InvalidOperationException($"Connection string za bazu nije pronađen! Dostupne env varijable u kontejneru su: [{envKeys}]");
 }
 
 string connString = rawConnectionString;
