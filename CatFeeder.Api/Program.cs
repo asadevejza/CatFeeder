@@ -28,8 +28,12 @@ builder.Services.AddControllers(options =>
 builder.Services.AddOpenApi();
 
 // Priprema i robusnija konverzija connection stringa za Npgsql (PostgreSQL)
+// Priprema i robusnija konverzija connection stringa za Npgsql (PostgreSQL)
 var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+    ?? Environment.GetEnvironmentVariable("DATABASE_URL")
+    ?? Environment.GetEnvironmentVariable("DATABASE_PUBLIC_URL")
+    ?? builder.Configuration["DATABASE_URL"]
+    ?? builder.Configuration["DATABASE_PUBLIC_URL"];
 
 if (string.IsNullOrEmpty(rawConnectionString))
 {
