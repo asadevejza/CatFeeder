@@ -25,4 +25,8 @@
     <ProjectReference Include="..\CatFeeder.Servis\CatFeeder.Servis.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
+  </ItemGroup>
+
 </Project>

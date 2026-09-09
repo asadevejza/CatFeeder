@@ -27,16 +27,13 @@ builder.Services.AddControllers(options =>
 
 builder.Services.AddOpenApi();
 
-// Priprema i robusnija konverzija connection stringa za Npgsql (PostgreSQL)
-// Priprema i robusnija konverzija connection stringa za Npgsql (PostgreSQL)
-// 1. Direktno čitanje iz varijabli okruženja i konfiguracije
+// Priprema i konverzija connection stringa za Npgsql (PostgreSQL)
 var rawConnectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
     ?? Environment.GetEnvironmentVariable("DATABASE_PUBLIC_URL")
     ?? builder.Configuration.GetConnectionString("DefaultConnection")
     ?? builder.Configuration["DATABASE_URL"]
     ?? builder.Configuration["ConnectionStrings:DefaultConnection"];
 
-// 2. Ako je i dalje null, ispiši sve dostupne ključeve radi lakše dijagnostike (privremeno)
 if (string.IsNullOrEmpty(rawConnectionString))
 {
     var envKeys = string.Join(", ", Environment.GetEnvironmentVariables().Keys.Cast<string>());
@@ -77,7 +74,6 @@ builder.Services.AddCors(options =>
 
 var jwtSecret = builder.Configuration["Jwt:Secret"]
     ?? throw new InvalidOperationException("Jwt:Secret nije podešen u konfiguraciji.");
-
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "CatFeederApi";
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -113,7 +109,6 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 
-// Omogućeno i na produkciji radi lakšeg testiranja dokumentacije
 app.MapOpenApi();
 app.MapScalarApiReference();
 
@@ -135,20 +130,29 @@ app.UseExceptionHandler(errorApp =>
 
 app.UseCors("DozvoliSve");
 
-var configuredApiKey = app.Configuration["ApiKey"];
+// Omogućava serviranje Flutter Web fajlova iz wwwroot foldera
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
+var configuredApiKey = app.Configuration["ApiKey"];
 if (string.IsNullOrWhiteSpace(configuredApiKey))
 {
     throw new InvalidOperationException("ApiKey nije podešen u konfiguraciji.");
 }
 
+// Middleware za provjeru X-Api-Key zaglavlja
 app.Use(async (context, next) =>
 {
     var path = context.Request.Path.Value ?? string.Empty;
     var isApiRoute = path.StartsWith("/api", StringComparison.OrdinalIgnoreCase);
     var isPreflight = HttpMethods.IsOptions(context.Request.Method);
 
-    if (isApiRoute && !isPreflight)
+    // Zaobilazimo provjeru ako je u pitanju bazna /api ruta
+    var isRootApiRoute = path.Equals("/api", StringComparison.OrdinalIgnoreCase) ||
+                         path.Equals("/api/", StringComparison.OrdinalIgnoreCase);
+
+    // Primenjujemo X-Api-Key provjeru samo na /api pod-rute (osim ako nije opcija ili root)
+    if (isApiRoute && !isPreflight && !isRootApiRoute)
     {
         var providedKey = context.Request.Headers["X-Api-Key"].ToString();
         if (string.IsNullOrEmpty(providedKey) || providedKey != configuredApiKey)
@@ -167,5 +171,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Ako ruta nije API, preusmjeri na Flutter Web index.html
+app.MapFallbackToFile("index.html");
 
 app.Run();
