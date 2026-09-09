@@ -39,7 +39,7 @@ class NotificationService {
       // ostaju na default zoni — rijedak slučaj, ali ne blokira app.
     }
 
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidInit = AndroidInitializationSettings('@mipmap/launcher_icon');
     const iosInit = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,

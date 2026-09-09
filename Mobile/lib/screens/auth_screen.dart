@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
 import '../localization/app_strings.dart';
+import 'server_address_screen.dart';
 
 // Prijava / registracija preko backenda (JWT). Prikazuje se dok korisnik
 // nije prijavljen (prvi put ili poslije odjave).
 class AuthScreen extends StatefulWidget {
   final String baseUrl;
   final VoidCallback onSuccess;
-  const AuthScreen({super.key, required this.baseUrl, required this.onSuccess});
+  final Future<void> Function(String newUrl) onBaseUrlChanged;
+  const AuthScreen({super.key, required this.baseUrl, required this.onSuccess, required this.onBaseUrlChanged});
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -71,7 +73,25 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ),
           child: SafeArea(
-            child: Center(
+            child: Stack(
+              children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: IconButton(
+                    icon: const Icon(Icons.settings_ethernet_rounded, color: Colors.white70),
+                    tooltip: AppStrings.t('server_address'),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ServerAddressScreen(
+                          currentBaseUrl: widget.baseUrl,
+                          onSave: widget.onBaseUrlChanged,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
                 child: Column(
@@ -160,6 +180,8 @@ class _AuthScreenState extends State<AuthScreen> {
                   ],
                 ),
               ),
+            ),
+              ],
             ),
           ),
         ),

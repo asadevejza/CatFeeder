@@ -138,6 +138,12 @@ class _AppRootState extends State<_AppRoot> {
 
   void _handleLogout() => setState(() => _isLoggedIn = false);
 
+  Future<void> _handleBaseUrlChanged(String newUrl) async {
+    await SettingsService.saveBaseUrl(newUrl);
+    if (!mounted) return;
+    setState(() => _baseUrl = newUrl);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoggedIn == null || _baseUrl == null) {
@@ -147,7 +153,7 @@ class _AppRootState extends State<_AppRoot> {
       );
     }
     if (_isLoggedIn == false) {
-      return AuthScreen(baseUrl: _baseUrl!, onSuccess: _handleAuthSuccess);
+      return AuthScreen(baseUrl: _baseUrl!, onSuccess: _handleAuthSuccess, onBaseUrlChanged: _handleBaseUrlChanged);
     }
     return MainNavigationScreen(initialBaseUrl: _baseUrl!, onLogout: _handleLogout);
   }

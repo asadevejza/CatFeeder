@@ -48,11 +48,13 @@ class AuthService {
 
   static Future<String?> _authRequest(String baseUrl, String endpoint, String username, String password) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/$endpoint'),
-        headers: apiHeaders(withJsonBody: true),
-        body: json.encode({'username': username, 'password': password}),
-      );
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/auth/$endpoint'),
+            headers: apiHeaders(withJsonBody: true),
+            body: json.encode({'username': username, 'password': password}),
+          )
+          .timeout(const Duration(seconds: 10));
       final decoded = json.decode(response.body) as Map<String, dynamic>;
       if (response.statusCode == 200) {
         await _saveSession(decoded['token'] as String, decoded['username'] as String);

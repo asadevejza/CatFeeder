@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- BEZ OVOGA release APK nema pristup mreži uopšte (debug/profile manifest
+         je imaju automatski od Fluttera, ali release ne). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <!-- Potrebno za notifikacije (podsjetnici za raspored, upozorenja o niskom nivou hrane/vode) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
@@ -10,7 +14,8 @@
     <application
         android:label="CatFeeder"
         android:name="${applicationName}"
-        android:icon="@mipmap/launcher_icon">
+        android:icon="@mipmap/launcher_icon"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
