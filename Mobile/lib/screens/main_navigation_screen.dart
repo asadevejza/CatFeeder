@@ -12,12 +12,13 @@ import '../services/auth_service.dart';
 import '../localization/app_strings.dart';
 import '../models/cat_profile.dart';
 import '../theme/app_colors.dart';
+import '../services/cat_api_service.dart';
 
 import 'device_screen.dart';
 import 'care_screen.dart';
 import 'services_screen.dart';
 import 'settings_screen.dart';
-import 'add_cat_screen.dart'; // Dodan uvoz za AddCatScreen
+import 'add_cat_screen.dart';
 
 // ================= GLAVNA NAVIGACIJA + DIJELJENO STANJE =================
 class MainNavigationScreen extends StatefulWidget {
@@ -224,18 +225,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
+  // --- KORIŠTENJE CAT API SERVISA ZA ČUVANJE NA SERVER ---
   Future<int?> addCat(String name, CatProfile catProfile) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/cats'),
-        headers: apiHeaders(withJsonBody: true),
-        body: json.encode({'name': name}),
-      );
-      if (response.statusCode != 200 && response.statusCode != 201) return null;
-      final created = json.decode(response.body) as Map<String, dynamic>;
-      final newCatId = created['id'] as int;
-      await ProfileService.saveCatProfile(newCatId, catProfile);
-      await fetchCats();
+      final newCatId = await CatApiService.createCat(name, catProfile);
+      if (newCatId != null) {
+        await fetchCats();
+      }
       return newCatId;
     } catch (_) {
       return null;
@@ -244,15 +240,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   Future<bool> updateCat(int catId, String name, CatProfile catProfile) async {
     try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/cats/$catId'),
-        headers: apiHeaders(withJsonBody: true),
-        body: json.encode({'name': name}),
-      );
-      if (response.statusCode != 200 && response.statusCode != 204) return false;
-      await ProfileService.saveCatProfile(catId, catProfile);
-      await fetchCats();
-      return true;
+      final success = await CatApiService.updateCat(catId, name, catProfile);
+      if (success) {
+        await fetchCats();
+      }
+      return success;
     } catch (_) {
       return false;
     }
@@ -260,9 +252,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   Future<bool> deleteCat(int id) async {
     try {
-      final response = await http.delete(Uri.parse('$baseUrl/cats/$id'), headers: apiHeaders());
+      final success = await CatApiService.deleteCat(id);
       if (!mounted) return false;
-      if (response.statusCode == 200 || response.statusCode == 204) {
+      if (success) {
         await CatAvatarService.removeAvatar(id);
         await ProfileService.deleteCatProfile(id);
         setState(() {
@@ -277,11 +269,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
-  // --- HELPER FUNKCIJE KOJE OTVARAJU FORMU ZA DODAVANJE / UREĐIVANJE ---
- // --- HELPER FUNKCIJE ZA OTVARANJE EKRANA ZA DODAVANJE / UREĐIVANJE ---
- // --- HELPER FUNKCIJE ZA OTVARANJE EKRANA ZA DODAVANJE / UREĐIVANJE ---
-// --- HELPER FUNKCIJE ZA OTVARANJE EKRANA ZA DODAVANJE / UREĐIVANJE ---
-// --- HELPER FUNKCIJE ZA OTVARANJE EKRANA ZA DODAVANJE / UREĐIVANJE ---
+  // --- HELPER FUNKCIJE ZA OTVARANJE EKRANA ZA DODAVANJE / UREĐIVANJE ---
   void _openAddCatScreen() async {
     final result = await Navigator.push(
       context,
@@ -299,7 +287,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   void _openUpdateCatScreen(Cat cat) async {
+    // Koristimo ProfileService da pročita lokalno sačuvane podatke za formu
     final catProfileData = await ProfileService.getCatProfile(cat.id);
+    
     if (!mounted) return;
 
     final result = await Navigator.push(
