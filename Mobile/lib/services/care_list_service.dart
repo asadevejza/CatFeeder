@@ -13,6 +13,7 @@ const Map<String, IconData> _iconByTaskId = {
   'litter': Icons.cleaning_services_rounded,
   'groom': Icons.brush_rounded,
   'water': Icons.water_drop_rounded,
+  'custom': Icons.edit_note_rounded,
 };
 
 const IconData _fallbackIcon = Icons.pets;

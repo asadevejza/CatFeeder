@@ -309,77 +309,132 @@ class _DashboardTab extends StatelessWidget {
   Future<void> _openFeedSheet(BuildContext context) async {
     if (cat == null) return;
     int selectedPortion = 50;
+    bool isCustom = false;
     bool isFeeding = false;
+    final customController = TextEditingController();
 
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (sheetContext) => StatefulBuilder(
-        builder: (sheetContext, setSheetState) => Padding(
-          padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + MediaQuery.of(sheetContext).viewInsets.bottom),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('${AppStrings.t('feed_dialog_title')} — ${cat!.name}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 18),
-              Text(AppStrings.t('portion_amount'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.black54)),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [50, 100, 150].map((grams) {
-                  final selected = selectedPortion == grams;
-                  return GestureDetector(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setSheetState(() => selectedPortion = grams);
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: selected ? AppColors.primary : Colors.white,
-                        borderRadius: BorderRadius.circular(100),
-                        border: Border.all(color: selected ? AppColors.primary : AppColors.tint100, width: 2),
-                      ),
-                      child: Text('${grams}g', style: TextStyle(color: selected ? Colors.white : AppColors.textDark, fontWeight: FontWeight.w700)),
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: isFeeding
-                      ? null
-                      : () async {
-                          setSheetState(() => isFeeding = true);
-                          final ok = await onFeedNow(cat!.id, selectedPortion);
-                          if (!sheetContext.mounted) return;
-                          if (ok) {
-                            HapticFeedback.mediumImpact();
-                          } else {
-                            HapticFeedback.vibrate();
-                          }
-                          Navigator.pop(sheetContext);
-                          FeedbackOverlay.show(
-                            context,
-                            success: ok,
-                            message: ok
-                                ? '${AppStrings.t('fed_success_prefix')}$selectedPortion${AppStrings.t('fed_success_for')}${cat!.name}! 🐾'
-                                : AppStrings.t('feed_failed'),
-                          );
+        builder: (sheetContext, setSheetState) {
+          final customValue = int.tryParse(customController.text.trim());
+          final canFeed = isCustom ? (customValue != null && customValue > 0) : true;
+
+          return Padding(
+            padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + MediaQuery.of(sheetContext).viewInsets.bottom),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${AppStrings.t('feed_dialog_title')} ${cat!.name}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 18),
+                Text(AppStrings.t('portion_amount'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.black54)),
+                const SizedBox(height: 10),
+                Wrap(
+                  alignment: WrapAlignment.spaceEvenly,
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    ...[50, 100, 150].map((grams) {
+                      final selected = !isCustom && selectedPortion == grams;
+                      return GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setSheetState(() {
+                            isCustom = false;
+                            selectedPortion = grams;
+                          });
                         },
-                  child: isFeeding
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
-                      : Text(AppStrings.t('feed_button')),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: selected ? AppColors.primary : Colors.white,
+                            borderRadius: BorderRadius.circular(100),
+                            border: Border.all(color: selected ? AppColors.primary : AppColors.tint100, width: 2),
+                          ),
+                          child: Text('${grams}g', style: TextStyle(color: selected ? Colors.white : AppColors.textDark, fontWeight: FontWeight.w700)),
+                        ),
+                      );
+                    }),
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setSheetState(() => isCustom = true);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: isCustom ? AppColors.primary : Colors.white,
+                          borderRadius: BorderRadius.circular(100),
+                          border: Border.all(color: isCustom ? AppColors.primary : AppColors.tint100, width: 2),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.edit_rounded, size: 15, color: isCustom ? Colors.white : AppColors.textDark),
+                            const SizedBox(width: 6),
+                            Text(AppStrings.t('custom_amount'), style: TextStyle(color: isCustom ? Colors.white : AppColors.textDark, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-        ),
+                if (isCustom) ...[
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: customController,
+                    autofocus: true,
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => setSheetState(() {}),
+                    decoration: InputDecoration(
+                      hintText: AppStrings.t('custom_amount_hint'),
+                      suffixText: 'g',
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.grey.shade200)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.grey.shade200)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: (isFeeding || !canFeed)
+                        ? null
+                        : () async {
+                            final portionToFeed = isCustom ? customValue! : selectedPortion;
+                            setSheetState(() => isFeeding = true);
+                            final ok = await onFeedNow(cat!.id, portionToFeed);
+                            if (!sheetContext.mounted) return;
+                            if (ok) {
+                              HapticFeedback.mediumImpact();
+                            } else {
+                              HapticFeedback.vibrate();
+                            }
+                            Navigator.pop(sheetContext);
+                            FeedbackOverlay.show(
+                              context,
+                              success: ok,
+                              title: ok ? AppStrings.t('fed_success_title') : AppStrings.t('feed_failed'),
+                              subtitle: ok ? '$portionToFeed g ${AppStrings.t('fed_success_for_name')} ${cat!.name}' : null,
+                            );
+                          },
+                    child: isFeeding
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
+                        : Text(AppStrings.t('feed_button')),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -692,27 +747,66 @@ class _CareListTabState extends State<_CareListTab> {
 
   Future<void> _addTask() async {
     if (widget.cat == null) return;
+    final customController = TextEditingController();
+
     final template = await showModalBottomSheet<CareTaskTemplate>(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(AppStrings.t('add_task'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-              ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(AppStrings.t('add_task'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                  ),
+                ),
+                ...careTaskTemplates.map((t) => ListTile(
+                      leading: Icon(t.icon, color: AppColors.primary),
+                      title: Text(t.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      onTap: () => Navigator.pop(context, t),
+                    )),
+                const Divider(height: 20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.edit_note_rounded, color: AppColors.primary),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: customController,
+                          textCapitalization: TextCapitalization.sentences,
+                          onChanged: (_) => setSheetState(() {}),
+                          decoration: InputDecoration(
+                            hintText: AppStrings.t('custom_task_hint'),
+                            border: InputBorder.none,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.check_circle_rounded, color: AppColors.primary),
+                        onPressed: customController.text.trim().isEmpty
+                            ? null
+                            : () => Navigator.pop(
+                                  context,
+                                  CareTaskTemplate('custom', customController.text.trim(), Icons.edit_note_rounded, CareDetailType.none),
+                                ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
             ),
-            ...careTaskTemplates.map((t) => ListTile(
-                  leading: Icon(t.icon, color: AppColors.primary),
-                  title: Text(t.title, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  onTap: () => Navigator.pop(context, t),
-                )),
-            const SizedBox(height: 8),
-          ],
+          ),
         ),
       ),
     );

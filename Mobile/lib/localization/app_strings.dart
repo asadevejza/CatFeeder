@@ -120,8 +120,10 @@ class AppStrings {
       'default_camera_name': 'Kamera hranilice', 'camera_connected': 'Kamera povezana',
 
       'feed_now': 'Nahrani sada', 'feed_dialog_title': 'Nahrani mačku', 'feed_button': 'Nahrani',
-      'fed_success_prefix': 'Uspješno ispušteno ', 'fed_success_for': ' g hrane za ',
+      'fed_success_title': 'Nahranjeno! 🐾', 'fed_success_for_name': 'za',
       'feed_failed': 'Neuspješno hranjenje.', 'no_cats_to_feed': 'Prvo dodaj mačku da bi je mogao nahraniti.',
+      'custom_amount': 'Drugo', 'custom_amount_hint': 'Unesi količinu',
+      'custom_task_hint': 'Dodaj svoj zadatak...',
       'services_subtitle': 'Sve što ti treba za brigu o mački, na jednom mjestu',
       'notifications_info': 'Uključene u Android/iOS Settings za ovu app.',
       'about_app_body': 'IoT projekat za automatsko i ručno hranjenje mačaka.',
@@ -245,8 +247,10 @@ class AppStrings {
       'default_camera_name': 'Feeder camera', 'camera_connected': 'Camera connected',
 
       'feed_now': 'Feed now', 'feed_dialog_title': 'Feed cat', 'feed_button': 'Feed',
-      'fed_success_prefix': 'Successfully dispensed ', 'fed_success_for': ' g of food for ',
+      'fed_success_title': 'Fed! 🐾', 'fed_success_for_name': 'for',
       'feed_failed': 'Feeding failed.', 'no_cats_to_feed': 'Add a cat first before you can feed it.',
+      'custom_amount': 'Custom', 'custom_amount_hint': 'Enter amount',
+      'custom_task_hint': 'Add your own task...',
       'services_subtitle': 'Everything you need to care for your cat, in one place',
       'notifications_info': 'Enabled in Android/iOS Settings for this app.',
       'about_app_body': 'An IoT project for automatic and manual cat feeding.',

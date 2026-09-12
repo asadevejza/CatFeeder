@@ -214,7 +214,7 @@ class _TrendScreenState extends State<TrendScreen> {
     return ValueListenableBuilder<String>(
       valueListenable: AppStrings.locale,
       builder: (context, _, __) => Scaffold(
-      appBar: AppBar(title: Text('$_title — ${widget.catName}')),
+      appBar: AppBar(title: Text('$_title ${widget.catName}')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
