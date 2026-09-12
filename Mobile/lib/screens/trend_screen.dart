@@ -140,6 +140,7 @@ class _TrendScreenState extends State<TrendScreen> {
     final result = await showDialog<double>(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(AppStrings.t('log_weight_title')),
         content: TextField(
           controller: controller,

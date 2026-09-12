@@ -244,7 +244,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
                           decoration: BoxDecoration(
                             color: AppColors.card,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.cardBorder),
+                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 14, offset: const Offset(0, 5))],
                           ),
                           child: Row(
                             children: [

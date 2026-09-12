@@ -53,6 +53,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
             const Icon(Icons.notifications_active, color: AppColors.primary),
@@ -83,7 +84,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final isEn = currentLang == 'en';
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF4F6F0),
+          backgroundColor: AppColors.background,
           body: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
