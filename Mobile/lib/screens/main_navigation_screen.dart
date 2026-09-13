@@ -228,7 +228,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   // --- KORIŠTENJE CAT API SERVISA ZA ČUVANJE NA SERVER ---
   Future<int?> addCat(String name, CatProfile catProfile) async {
     try {
-      final newCatId = await CatApiService.createCat(name, catProfile);
+      final newCatId = await CatApiService.createCat(baseUrl, name, catProfile);
       if (newCatId != null) {
         await fetchCats();
       }
@@ -240,7 +240,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   Future<bool> updateCat(int catId, String name, CatProfile catProfile) async {
     try {
-      final success = await CatApiService.updateCat(catId, name, catProfile);
+      final success = await CatApiService.updateCat(baseUrl, catId, name, catProfile);
       if (success) {
         await fetchCats();
       }
@@ -252,7 +252,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   Future<bool> deleteCat(int id) async {
     try {
-      final success = await CatApiService.deleteCat(id);
+      final success = await CatApiService.deleteCat(baseUrl, id);
       if (!mounted) return false;
       if (success) {
         await CatAvatarService.removeAvatar(id);

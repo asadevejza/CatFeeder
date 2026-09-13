@@ -8,10 +8,10 @@ import '../api_config.dart';
 class CatApiService {
   
   // 1. Dobavljanje svih mačaka
-  static Future<List<Cat>> getCats() async {
+  static Future<List<Cat>> getCats(String baseUrl) async {
     try {
       final response = await http.get(
-        Uri.parse('$defaultBaseUrl/Cats'),
+        Uri.parse('$baseUrl/Cats'),
         headers: apiHeaders(),
       );
 
@@ -29,7 +29,7 @@ class CatApiService {
   }
 
   // 2. Kreiranje nove mačke
-  static Future<int?> createCat(String name, CatProfile profile) async {
+  static Future<int?> createCat(String baseUrl, String name, CatProfile profile) async {
     try {
       final bodyData = {
         'name': name,
@@ -42,7 +42,7 @@ class CatApiService {
       };
 
       final response = await http.post(
-        Uri.parse('$defaultBaseUrl/Cats'),
+        Uri.parse('$baseUrl/Cats'),
         headers: apiHeaders(withJsonBody: true),
         body: json.encode(bodyData),
       );
@@ -66,7 +66,7 @@ class CatApiService {
   }
 
   // 3. Ažuriranje postojeće mačke
-  static Future<bool> updateCat(int catId, String name, CatProfile profile) async {
+  static Future<bool> updateCat(String baseUrl, int catId, String name, CatProfile profile) async {
     try {
       final bodyData = {
         'id': catId,
@@ -80,7 +80,7 @@ class CatApiService {
       };
 
       final response = await http.put(
-        Uri.parse('$defaultBaseUrl/Cats/$catId'),
+        Uri.parse('$baseUrl/Cats/$catId'),
         headers: apiHeaders(withJsonBody: true),
         body: json.encode(bodyData),
       );
@@ -96,10 +96,10 @@ class CatApiService {
   }
 
   // 4. Dobavljanje profila mačke
-  static Future<CatProfile?> getCatProfile(int catId) async {
+  static Future<CatProfile?> getCatProfile(String baseUrl, int catId) async {
     try {
       final response = await http.get(
-        Uri.parse('$defaultBaseUrl/Cats/$catId'),
+        Uri.parse('$baseUrl/Cats/$catId'),
         headers: apiHeaders(),
       );
       
@@ -121,10 +121,10 @@ class CatApiService {
   }
 
   // 5. Brisanje mačke
-  static Future<bool> deleteCat(int catId) async {
+  static Future<bool> deleteCat(String baseUrl, int catId) async {
     try {
       final response = await http.delete(
-        Uri.parse('$defaultBaseUrl/Cats/$catId'),
+        Uri.parse('$baseUrl/Cats/$catId'),
         headers: apiHeaders(),
       );
       return response.statusCode == 204 || response.statusCode == 200;
