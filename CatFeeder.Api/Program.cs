@@ -99,7 +99,7 @@ builder.Services.AddScoped<FeedingLogServis>();
 builder.Services.AddScoped<FeedingScheduleServis>();
 builder.Services.AddScoped<SensorReadingServis>();
 builder.Services.AddScoped<UserServis>();
-
+builder.Services.AddScoped<AiInsightServis>();
 var app = builder.Build();
 
 // Automatski primijeni EF Core migracije pri pokretanju
