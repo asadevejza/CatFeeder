@@ -14,6 +14,7 @@ import '../widgets/empty_state.dart';
 import '../widgets/feedback_overlay.dart';
 import '../widgets/skeleton_box.dart';
 import '../services/weight_history_service.dart';
+import '../services/ai_insight_service.dart';
 const List<String> _mjeseciBs = [
   'jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'avg', 'sep', 'okt', 'nov', 'dec',
 ];
@@ -545,7 +546,9 @@ class _DashboardTab extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 20),
+       const SizedBox(height: 14),
+      _AiInsightCard(catId: cat!.id, baseUrl: baseUrl),
+      const SizedBox(height: 20),
       ],
       ),
     );
@@ -1037,6 +1040,116 @@ class _CircleCheck extends StatelessWidget {
         ),
         child: done ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
       ),
+    );
+  }
+}
+class _AiInsightCard extends StatefulWidget {
+  final int catId;
+  final String baseUrl;
+
+  const _AiInsightCard({required this.catId, required this.baseUrl});
+
+  @override
+  State<_AiInsightCard> createState() => _AiInsightCardState();
+}
+
+class _AiInsightCardState extends State<_AiInsightCard> {
+  late Future<AiInsight?> _futureInsight;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInsight();
+  }
+
+  @override
+  void didUpdateWidget(covariant _AiInsightCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.catId != widget.catId) {
+      _loadInsight();
+    }
+  }
+
+  void _loadInsight() {
+    setState(() {
+      _futureInsight = AiInsightService.fetch(widget.baseUrl, widget.catId);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<AiInsight?>(
+      future: _futureInsight,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+
+        final insight = snapshot.data;
+        if (insight == null) return const SizedBox.shrink();
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    AppStrings.t('ai_insights_title'),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                insight.summary,
+                style: const TextStyle(fontSize: 14, color: AppColors.textDark),
+              ),
+              if (insight.alerts.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                ...insight.alerts.map(
+                  (alert) => Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 18),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            alert,
+                            style: const TextStyle(fontSize: 13, color: Colors.black87),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }

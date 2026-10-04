@@ -28,5 +28,8 @@
   <ItemGroup>
     <Folder Include="wwwroot\" />
   </ItemGroup>
-
+	
+	<ItemGroup>
+		<None Include="Models\**" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
 </Project>

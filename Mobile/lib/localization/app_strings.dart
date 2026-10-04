@@ -130,6 +130,14 @@ class AppStrings {
       'welcome_back': 'Dobrodošao nazad! 👋',
       'connection_error_title': 'Nema konekcije sa serverom',
       'connection_error_body': 'Provjeri adresu servera — dodirni za podešavanje',
+
+      'ai_insights_title': 'AI uvidi',
+      'ai_detect_title': 'AI prepoznavanje mačke',
+      'ai_detect_explain': 'Odaberi fotku da provjeriš da li AI model prepoznaje mačku na slici. Kad kamera bude fizički povezana, ova provjera će raditi automatski sa live snimkom.',
+      'ai_detect_button': 'Odaberi fotku',
+      'ai_detect_found': 'Mačka prepoznata',
+      'ai_detect_not_found': 'Mačka nije prepoznata na slici',
+      'ai_detect_error': 'Greška pri AI provjeri — provjeri konekciju sa serverom',
     },
     'en': {
       'device': 'Devices', 'care': 'Care', 'services': 'Services', 'me': 'Me',
@@ -257,6 +265,14 @@ class AppStrings {
       'welcome_back': 'Welcome back! 👋',
       'connection_error_title': 'No connection to server',
       'connection_error_body': 'Check your server address — tap to configure',
+
+      'ai_insights_title': 'AI Insights',
+      'ai_detect_title': 'AI Cat Recognition',
+      'ai_detect_explain': 'Pick a photo to test whether the AI model recognizes a cat in it. Once the camera is physically connected, this check will run automatically on the live feed.',
+      'ai_detect_button': 'Choose photo',
+      'ai_detect_found': 'Cat detected',
+      'ai_detect_not_found': 'No cat detected in the photo',
+      'ai_detect_error': 'AI check failed — check your server connection',
     },
   };
 

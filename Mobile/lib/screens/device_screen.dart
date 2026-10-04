@@ -53,11 +53,19 @@ class _DeviceScreenState extends State<DeviceScreen> {
     setState(() => _isCameraPaired = paired);
   }
 
-  Future<void> _openCamera() async {
-    final catName = widget.cats.isNotEmpty ? widget.cats.first.name : AppStrings.t('feeder_name');
+   Future<void> _openCamera() async {
+    if (widget.cats.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppStrings.t('no_cats_to_feed'))),
+      );
+      return;
+    }
+    final cat = widget.cats.first;
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => CameraScreen(catName: catName)),
+      MaterialPageRoute(
+        builder: (context) => CameraScreen(catId: cat.id, catName: cat.name, baseUrl: widget.baseUrl),
+      ),
     );
     _loadCameraState();
   }
