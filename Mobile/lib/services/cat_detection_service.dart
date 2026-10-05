@@ -17,6 +17,30 @@ class CatDetectionResult {
       );
 }
 
+class DetectionLogEntry {
+  final int id;
+  final bool catDetected;
+  final double confidence;
+  final String label;
+  final DateTime detectedAt;
+
+  DetectionLogEntry({
+    required this.id,
+    required this.catDetected,
+    required this.confidence,
+    required this.label,
+    required this.detectedAt,
+  });
+
+  factory DetectionLogEntry.fromJson(Map<String, dynamic> json) => DetectionLogEntry(
+        id: json['id'] as int? ?? 0,
+        catDetected: json['catDetected'] as bool? ?? false,
+        confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+        label: json['label'] as String? ?? '',
+        detectedAt: DateTime.parse(json['detectedAt'] as String).toLocal(),
+      );
+}
+
 class CatDetectionService {
   static Future<CatDetectionResult?> detect(String baseUrl, int catId, Uint8List imageBytes, String fileName) async {
     try {
@@ -31,9 +55,20 @@ class CatDetectionService {
       if (response.statusCode == 200) {
         return CatDetectionResult.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
       }
-    } catch (_) {
-      // Tiho ignorišemo — UI prikazuje generičku grešku.
-    }
+    } catch (_) {}
     return null;
+  }
+
+  static Future<List<DetectionLogEntry>> getHistory(String baseUrl, int catId) async {
+    try {
+      final uri = Uri.parse('$baseUrl/cats/$catId/detections');
+      final response = await http.get(uri, headers: apiHeaders());
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as List<dynamic>;
+        return data.map((e) => DetectionLogEntry.fromJson(e as Map<String, dynamic>)).toList();
+      }
+    } catch (_) {}
+    return [];
   }
 }

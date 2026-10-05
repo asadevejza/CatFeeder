@@ -102,8 +102,9 @@ builder.Services.AddScoped<UserServis>();
 builder.Services.AddScoped<AiInsightServis>();
 builder.Services.AddSingleton<CatDetectionServis>(_ =>
     new CatDetectionServis(Path.Combine(AppContext.BaseDirectory, "Models", "mobilenetv2-12.onnx")));
-var app = builder.Build();
 builder.Services.AddHttpClient<ChatServis>();
+var app = builder.Build();
+
 // Automatski primijeni EF Core migracije pri pokretanju
 using (var scope = app.Services.CreateScope())
 {

@@ -138,6 +138,7 @@ class AppStrings {
       'ai_detect_found': 'Mačka prepoznata',
       'ai_detect_not_found': 'Mačka nije prepoznata na slici',
       'ai_detect_error': 'Greška pri AI provjeri — provjeri konekciju sa serverom',
+      'ai_detect_history_button': 'Historija detekcija',
     },
     'en': {
       'device': 'Devices', 'care': 'Care', 'services': 'Services', 'me': 'Me',
@@ -273,6 +274,7 @@ class AppStrings {
       'ai_detect_found': 'Cat detected',
       'ai_detect_not_found': 'No cat detected in the photo',
       'ai_detect_error': 'AI check failed — check your server connection',
+      'ai_detect_history_button': 'Detection history',
     },
   };
 

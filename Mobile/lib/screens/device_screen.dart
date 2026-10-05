@@ -7,6 +7,7 @@ import 'status_detail_screen.dart';
 import 'camera_screen.dart';
 import 'server_address_screen.dart';
 import '../widgets/skeleton_box.dart';
+import 'chat_screen.dart';
 
 class DeviceScreen extends StatefulWidget {
   final double foodLevel;
@@ -53,7 +54,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
     setState(() => _isCameraPaired = paired);
   }
 
-   Future<void> _openCamera() async {
+  Future<void> _openCamera() async {
     if (widget.cats.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppStrings.t('no_cats_to_feed'))),
@@ -68,6 +69,26 @@ class _DeviceScreenState extends State<DeviceScreen> {
       ),
     );
     _loadCameraState();
+  }
+
+  void _openChat() {
+    if (widget.cats.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppStrings.t('no_cats_to_feed'))),
+      );
+      return;
+    }
+    final cat = widget.cats.first;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatScreen(
+          baseUrl: widget.baseUrl,
+          catId: cat.id,
+          catName: cat.name,
+        ),
+      ),
+    );
   }
 
   @override
@@ -162,7 +183,6 @@ class _DeviceScreenState extends State<DeviceScreen> {
                           ),
                           child: Stack(
                             children: [
-                              // Dekorativna šapa u pozadini, samo za "wow" efekat
                               Positioned(
                                 right: -18,
                                 top: -14,
@@ -256,7 +276,6 @@ class _DeviceScreenState extends State<DeviceScreen> {
                           ),
                           child: Row(
                             children: [
-                              // Upareno: puna boja + kamera ikonica. Nije upareno: "okvir" - jasno pokazuje da nije aktivno/povezano.
                               Container(
                                 width: 48,
                                 height: 48,
@@ -298,6 +317,12 @@ class _DeviceScreenState extends State<DeviceScreen> {
                             ],
                           ),
                         ),
+                      ),
+                      const SizedBox(height: 14),
+                      ElevatedButton.icon(
+                        onPressed: _openChat,
+                        icon: const Icon(Icons.chat),
+                        label: const Text('AI asistent'),
                       ),
                     ],
                   ),

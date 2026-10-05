@@ -5,8 +5,8 @@ import 'package:timezone/timezone.dart' as tz;
 import '../localization/app_strings.dart';
 
 // Upravlja lokalnim notifikacijama — podsjetnici za zakazano hranjenje i
-// upozorenja kad ponestane hrane/vode. Sve radi lokalno na telefonu, ne
-// treba mu internet ni push server.
+// upozorenja kad ponestane hrane/vode, te obavještenja o AI prepoznavanju
+// mačke. Sve radi lokalno na telefonu, ne treba mu internet ni push server.
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
@@ -23,6 +23,14 @@ class NotificationService {
         'low_level_channel',
         AppStrings.t('notif_alert_channel_name'),
         channelDescription: AppStrings.t('notif_alert_channel_desc'),
+        importance: Importance.high,
+        priority: Priority.high,
+      );
+
+  static AndroidNotificationDetails get _detectionAndroidDetails => AndroidNotificationDetails(
+        'cat_detection_channel',
+        AppStrings.t('notif_detection_channel_name'),
+        channelDescription: AppStrings.t('notif_detection_channel_desc'),
         importance: Importance.high,
         priority: Priority.high,
       );
@@ -139,6 +147,25 @@ class NotificationService {
       title: title,
       body: body,
       notificationDetails: NotificationDetails(android: _alertAndroidDetails),
+    );
+  }
+
+  // Trenutna notifikacija nakon AI provjere fotografije (ručni test ili,
+  // kasnije, automatska provjera sa live kamere).
+  static Future<void> showDetectionResult({required bool catDetected, required String catName}) async {
+    final now = DateTime.now();
+    final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
+    final title = catDetected
+        ? AppStrings.t('notif_detection_found_title')
+        : AppStrings.t('notif_detection_not_found_title');
+    final body = '$catName — ${AppStrings.t('notif_detection_body_prefix')} $timeStr';
+
+    await _plugin.show(
+      id: 900003,
+      title: title,
+      body: body,
+      notificationDetails: NotificationDetails(android: _detectionAndroidDetails),
     );
   }
 }

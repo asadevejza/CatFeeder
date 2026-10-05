@@ -5,6 +5,8 @@ import '../services/profile_service.dart';
 import '../services/cat_detection_service.dart';
 import '../theme/app_colors.dart';
 import '../localization/app_strings.dart';
+import '../services/notification_service.dart';
+import 'detection_history_screen.dart';
 
 // NAPOMENA: hranilica (ESP32 firmver u ovom projektu) trenutno nema kameru
 // niti video stream. Ovaj ekran je UI za uparivanje i prikaz kamere u istom
@@ -31,6 +33,7 @@ class _CameraScreenState extends State<CameraScreen> {
   @override
   void initState() {
     super.initState();
+    NotificationService.init();
     _load();
   }
 
@@ -185,6 +188,13 @@ class _LiveViewState extends State<_LiveView> {
         _lastResult = result;
       }
     });
+
+    if (result != null) {
+      await NotificationService.showDetectionResult(
+        catDetected: result.catDetected,
+        catName: widget.catName,
+      );
+    }
   }
 
   @override
@@ -287,6 +297,26 @@ class _LiveViewState extends State<_LiveView> {
                         ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.image_search_rounded, size: 18),
                     label: Text(AppStrings.t('ai_detect_button')),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DetectionHistoryScreen(
+                            baseUrl: widget.baseUrl,
+                            catId: widget.catId,
+                            catName: widget.catName,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.history, size: 18),
+                    label: Text(AppStrings.t('ai_detect_history_button')),
                   ),
                 ),
                 if (_lastResult != null) ...[
