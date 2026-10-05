@@ -8,7 +8,8 @@ import 'camera_screen.dart';
 import 'server_address_screen.dart';
 import '../widgets/skeleton_box.dart';
 import 'chat_screen.dart';
-
+import '../services/activity_check_service.dart';
+import '../services/notification_service.dart';
 class DeviceScreen extends StatefulWidget {
   final double foodLevel;
   final double? waterLevel;
@@ -46,6 +47,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
   void initState() {
     super.initState();
     _loadCameraState();
+     _checkOverdueFeeding();
   }
 
   Future<void> _loadCameraState() async {
@@ -53,7 +55,17 @@ class _DeviceScreenState extends State<DeviceScreen> {
     if (!mounted) return;
     setState(() => _isCameraPaired = paired);
   }
-
+Future<void> _checkOverdueFeeding() async {
+  for (final cat in widget.cats) {
+    final activity = await ActivityCheckService.checkLastActivity(widget.baseUrl, cat.id);
+    if (activity != null && activity.isOverdue) {
+      await NotificationService.showOverdueFeedingAlert(
+        catName: cat.name,
+        hoursSince: activity.hoursSinceLastFeeding ?? 0,
+      );
+    }
+  }
+}
   Future<void> _openCamera() async {
     if (widget.cats.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(

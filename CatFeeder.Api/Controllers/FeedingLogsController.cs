@@ -60,5 +60,21 @@ namespace CatFeeder.Api.Controllers
 
             return Ok(ToDto(log));
         }
+        // 4. Provjeri kada je mačka zadnje hranjena (za upozorenje u appu)
+        [HttpGet("cat/{catId}/last-activity")]
+        public async Task<ActionResult<LastActivityDto>> GetLastActivity(int catId, [FromQuery] double overdueAfterHours = 10)
+        {
+            var last = await _logServis.GetLastByCatIdAsync(catId);
+            if (last == null)
+                return Ok(new LastActivityDto { LastFeedingAt = null, HoursSinceLastFeeding = null, IsOverdue = false });
+
+            var hoursSince = (DateTime.UtcNow - last.Timestamp).TotalHours;
+            return Ok(new LastActivityDto
+            {
+                LastFeedingAt = last.Timestamp,
+                HoursSinceLastFeeding = hoursSince,
+                IsOverdue = hoursSince >= overdueAfterHours
+            });
+        }
     }
 }

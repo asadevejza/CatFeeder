@@ -10,6 +10,9 @@
          double? DeviationFromAveragePercent,
          string Regularity,
          List<string> Alerts,
-         string Summary
+         string Summary,
+         double? WeightTrendKg = null,
+         double? WeightTrendPercent = null,
+         string? WeightTrend = null
      );
 }

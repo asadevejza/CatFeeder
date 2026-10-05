@@ -190,11 +190,13 @@ class _LiveViewState extends State<_LiveView> {
     });
 
     if (result != null) {
-      await NotificationService.showDetectionResult(
-        catDetected: result.catDetected,
-        catName: widget.catName,
-      );
-    }
+  await NotificationService.showDetectionResult(
+    catDetected: result.catDetected,
+    catName: widget.catName,
+    autoFed: result.autoFed,
+    portionGrams: result.portionGrams,
+  );
+}
   }
 
   @override

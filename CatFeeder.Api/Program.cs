@@ -103,6 +103,7 @@ builder.Services.AddScoped<AiInsightServis>();
 builder.Services.AddSingleton<CatDetectionServis>(_ =>
     new CatDetectionServis(Path.Combine(AppContext.BaseDirectory, "Models", "mobilenetv2-12.onnx")));
 builder.Services.AddHttpClient<ChatServis>();
+builder.Services.AddScoped<WeightLogServis>();
 var app = builder.Build();
 
 // Automatski primijeni EF Core migracije pri pokretanju

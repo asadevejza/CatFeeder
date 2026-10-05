@@ -13,11 +13,19 @@ namespace CatFeeder.Api.Controllers
     {
         private readonly CatDetectionServis _detectionServis;
         private readonly CatFeederDbContext _db;
+        private readonly FeedingLogServis _feedingLogServis;
+        private readonly FeedingScheduleServis _feedingScheduleServis;
 
-        public DetectionController(CatDetectionServis detectionServis, CatFeederDbContext db)
+        public DetectionController(
+            CatDetectionServis detectionServis,
+            CatFeederDbContext db,
+            FeedingLogServis feedingLogServis,
+            FeedingScheduleServis feedingScheduleServis)
         {
             _detectionServis = detectionServis;
             _db = db;
+            _feedingLogServis = feedingLogServis;
+            _feedingScheduleServis = feedingScheduleServis;
         }
 
         [HttpPost]
@@ -43,12 +51,33 @@ namespace CatFeeder.Api.Controllers
             _db.DetectionLogs.Add(log);
             await _db.SaveChangesAsync();
 
+            bool autoFed = false;
+            int? portionGrams = null;
+
+            if (result.CatDetected)
+            {
+                var schedules = await _feedingScheduleServis.GetByCatIdAsync(catId);
+                portionGrams = schedules.Count > 0 ? schedules.First().PortionGrams : 50;
+
+                var feedingLog = new FeedingLog
+                {
+                    CatId = catId,
+                    PortionGrams = portionGrams.Value,
+                    TriggeredBy = "AI-Detection",
+                    Timestamp = DateTime.UtcNow
+                };
+                await _feedingLogServis.AddAsync(feedingLog);
+                autoFed = true;
+            }
+
             return Ok(new
             {
                 catDetected = result.CatDetected,
                 confidence = result.Confidence,
                 label = result.TopLabel,
-                detectedAt = log.DetectedAt
+                detectedAt = log.DetectedAt,
+                autoFed,
+                portionGrams
             });
         }
 

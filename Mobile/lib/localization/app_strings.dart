@@ -139,6 +139,10 @@ class AppStrings {
       'ai_detect_not_found': 'Mačka nije prepoznata na slici',
       'ai_detect_error': 'Greška pri AI provjeri — provjeri konekciju sa serverom',
       'ai_detect_history_button': 'Historija detekcija',
+      'notif_overdue_channel_name': 'Upozorenje o hranjenju',
+      'notif_overdue_channel_desc': 'Obavještenje kad mačka dugo nije hranjena',
+      'notif_overdue_title': 'Nije hranjena odavno! ⚠️',
+        'notif_overdue_body': 'nije hranjena već',
     },
     'en': {
       'device': 'Devices', 'care': 'Care', 'services': 'Services', 'me': 'Me',
@@ -275,6 +279,10 @@ class AppStrings {
       'ai_detect_not_found': 'No cat detected in the photo',
       'ai_detect_error': 'AI check failed — check your server connection',
       'ai_detect_history_button': 'Detection history',
+      'notif_overdue_channel_name': 'Feeding alert',
+      'notif_overdue_channel_desc': 'Notification when the cat hasn\'t been fed in a while',
+      'notif_overdue_title': 'Not fed in a while! ⚠️',
+      'notif_overdue_body': 'hasn\'t been fed for',
     },
   };
 

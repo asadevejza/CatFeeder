@@ -4,23 +4,30 @@ using CatFeeder.Data.Modeli;
 namespace CatFeeder.Servis.Servisi
 {
     // Jednostavan statistički AI modul: detektuje odstupanja u hranjenju
-    // (anomaly detection preko z-score) i preporučuje dnevnu porciju
-    // na osnovu RER (Resting Energy Requirement) formule iz veterinarske nauke.
+    // (anomaly detection preko z-score), preporučuje dnevnu porciju
+    // na osnovu RER (Resting Energy Requirement) formule iz veterinarske nauke,
+    // i analizira trend tjelesne težine kroz posljednjih 30 dana.
     public class AiInsightServis
     {
         private readonly FeedingLogServis _feedingLogServis;
         private readonly FeedingScheduleServis _feedingScheduleServis;
+        private readonly WeightLogServis _weightLogServis;
 
-        public AiInsightServis(FeedingLogServis feedingLogServis, FeedingScheduleServis feedingScheduleServis)
+        public AiInsightServis(
+            FeedingLogServis feedingLogServis,
+            FeedingScheduleServis feedingScheduleServis,
+            WeightLogServis weightLogServis)
         {
             _feedingLogServis = feedingLogServis;
             _feedingScheduleServis = feedingScheduleServis;
+            _weightLogServis = weightLogServis;
         }
 
         public async Task<AiInsightDto> GenerateAsync(Cat cat)
         {
             var logs = await _feedingLogServis.GetByCatIdAsync(cat.Id);
             var schedules = await _feedingScheduleServis.GetByCatIdAsync(cat.Id);
+            var weightLogs = await _weightLogServis.GetByCatIdAsync(cat.Id);
 
             var alerts = new List<string>();
             var now = DateTime.UtcNow;
@@ -93,6 +100,40 @@ namespace CatFeeder.Servis.Servisi
                 }
             }
 
+            // Analiza trenda težine kroz zadnjih 30 dana
+            double? weightTrendKg = null;
+            double? weightTrendPercent = null;
+            string? weightTrend = null;
+
+            var recentWeights = weightLogs.Where(w => w.Date >= now.AddDays(-30)).ToList();
+            if (recentWeights.Count >= 2)
+            {
+                var first = recentWeights.First();
+                var last = recentWeights.Last();
+                weightTrendKg = last.WeightKg - first.WeightKg;
+                weightTrendPercent = first.WeightKg > 0 ? (weightTrendKg.Value / first.WeightKg) * 100 : 0;
+                var daysSpan = Math.Max((last.Date - first.Date).Days, 1);
+
+                if (weightTrendPercent >= 10)
+                {
+                    weightTrend = "Mačka dobija na težini";
+                    alerts.Add($"{cat.Name} je dobila {weightTrendKg:F2}kg ({weightTrendPercent:F0}%) u zadnjih {daysSpan} dana — razmotri smanjenje porcija ili konsultaciju s veterinarom.");
+                }
+                else if (weightTrendPercent <= -10)
+                {
+                    weightTrend = "Mačka gubi na težini";
+                    alerts.Add($"{cat.Name} je izgubila {Math.Abs(weightTrendKg.Value):F2}kg ({Math.Abs(weightTrendPercent.Value):F0}%) u zadnjih {daysSpan} dana — moguć znak bolesti, preporučuje se veterinarski pregled.");
+                }
+                else
+                {
+                    weightTrend = "Težina je stabilna";
+                }
+            }
+            else
+            {
+                weightTrend = "Nedovoljno mjerenja težine za procjenu trenda (treba bar 2 unosa)";
+            }
+
             var summary = avgDaily.HasValue
                 ? $"{cat.Name} u prosjeku pojede {avgDaily:F0}g dnevno" +
                   (recommendedDailyGrams.HasValue ? $", preporučeno je ~{recommendedDailyGrams:F0}g dnevno. " : ". ") +
@@ -109,7 +150,10 @@ namespace CatFeeder.Servis.Servisi
                 deviationPercent,
                 regularity,
                 alerts,
-                summary
+                summary,
+                weightTrendKg,
+                weightTrendPercent,
+                weightTrend
             );
         }
     }

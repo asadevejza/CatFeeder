@@ -152,20 +152,45 @@ class NotificationService {
 
   // Trenutna notifikacija nakon AI provjere fotografije (ručni test ili,
   // kasnije, automatska provjera sa live kamere).
-  static Future<void> showDetectionResult({required bool catDetected, required String catName}) async {
+   static Future<void> showDetectionResult({
+    required bool catDetected,
+    required String catName,
+    bool autoFed = false,
+    double? portionGrams,
+  }) async {
     final now = DateTime.now();
     final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
     final title = catDetected
         ? AppStrings.t('notif_detection_found_title')
         : AppStrings.t('notif_detection_not_found_title');
-    final body = '$catName — ${AppStrings.t('notif_detection_body_prefix')} $timeStr';
+
+    var body = '$catName — ${AppStrings.t('notif_detection_body_prefix')} $timeStr';
+    if (autoFed && portionGrams != null) {
+      body += ' — ${AppStrings.t('notif_autofed_suffix')} ${portionGrams.toStringAsFixed(0)}g';
+    }
 
     await _plugin.show(
       id: 900003,
       title: title,
       body: body,
       notificationDetails: NotificationDetails(android: _detectionAndroidDetails),
+    );
+  }
+    static AndroidNotificationDetails get _overdueAndroidDetails => AndroidNotificationDetails(
+        'overdue_feeding_channel',
+        AppStrings.t('notif_overdue_channel_name'),
+        channelDescription: AppStrings.t('notif_overdue_channel_desc'),
+        importance: Importance.high,
+        priority: Priority.high,
+      );
+
+  static Future<void> showOverdueFeedingAlert({required String catName, required double hoursSince}) async {
+    await _plugin.show(
+      id: 900004,
+      title: AppStrings.t('notif_overdue_title'),
+      body: '$catName ${AppStrings.t('notif_overdue_body')} ${hoursSince.toStringAsFixed(0)}h',
+      notificationDetails: NotificationDetails(android: _overdueAndroidDetails),
     );
   }
 }

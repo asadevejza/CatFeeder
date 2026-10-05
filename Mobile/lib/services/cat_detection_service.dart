@@ -7,13 +7,23 @@ class CatDetectionResult {
   final bool catDetected;
   final double confidence;
   final String label;
+  final bool autoFed;
+  final double? portionGrams;
 
-  CatDetectionResult({required this.catDetected, required this.confidence, required this.label});
+  CatDetectionResult({
+    required this.catDetected,
+    required this.confidence,
+    required this.label,
+    this.autoFed = false,
+    this.portionGrams,
+  });
 
   factory CatDetectionResult.fromJson(Map<String, dynamic> json) => CatDetectionResult(
         catDetected: json['catDetected'] as bool? ?? false,
         confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
         label: json['label'] as String? ?? '',
+        autoFed: json['autoFed'] as bool? ?? false,
+        portionGrams: (json['portionGrams'] as num?)?.toDouble(),
       );
 }
 
