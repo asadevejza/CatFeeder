@@ -13,12 +13,16 @@ import '../localization/app_strings.dart';
 import '../models/cat_profile.dart';
 import '../theme/app_colors.dart';
 import '../services/cat_api_service.dart';
+import '../widgets/app_logo.dart';
 
 import 'device_screen.dart';
 import 'care_screen.dart';
 import 'services_screen.dart';
 import 'settings_screen.dart';
+import 'modern_screens.dart';
 import 'add_cat_screen.dart';
+import 'camera_screen.dart';
+import 'chat_screen.dart';
 
 // ================= GLAVNA NAVIGACIJA + DIJELJENO STANJE =================
 class MainNavigationScreen extends StatefulWidget {
@@ -146,6 +150,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             selectedCatId = loaded.first.id;
           }
         });
+        await _hydrateCatProfiles(loaded);
         fetchFeedingSummary();
       } else {
         setState(() {
@@ -159,6 +164,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         isLoadingCats = false;
         connectionError = true;
       });
+    }
+  }
+
+  Future<void> _hydrateCatProfiles(List<Cat> loaded) async {
+    for (final cat in loaded) {
+      final local = await ProfileService.getCatProfile(cat.id);
+      final backend = await CatApiService.getCatProfile(baseUrl, cat.id);
+      if (backend != null && (local == null || backend.weightKg > 0 || backend.dailyGoalGrams > 0 || backend.breed.isNotEmpty)) {
+        await ProfileService.saveCatProfile(cat.id, backend);
+      }
     }
   }
 
@@ -226,29 +241,71 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   // --- KORIŠTENJE CAT API SERVISA ZA ČUVANJE NA SERVER ---
-  Future<int?> addCat(String name, CatProfile catProfile) async {
-    try {
-      final newCatId = await CatApiService.createCat(baseUrl, name, catProfile);
-      if (newCatId != null) {
-        await fetchCats();
-      }
-      return newCatId;
-    } catch (_) {
-      return null;
-    }
-  }
+Future<int?> addCat(
+  String name,
+  CatProfile catProfile,
+) async {
+  try {
+    final newCatId = await CatApiService.createCat(
+      baseUrl,
+      name,
+      catProfile,
+    );
 
-  Future<bool> updateCat(int catId, String name, CatProfile catProfile) async {
-    try {
-      final success = await CatApiService.updateCat(baseUrl, catId, name, catProfile);
-      if (success) {
-        await fetchCats();
+    if (newCatId != null) {
+      await fetchCats();
+      var resolvedId = newCatId > 0 ? newCatId : null;
+      if (resolvedId == null) {
+        for (final cat in cats) {
+          if (cat.name.trim().toLowerCase() == name.trim().toLowerCase()) {
+            resolvedId = cat.id;
+            break;
+          }
+        }
       }
-      return success;
-    } catch (_) {
-      return false;
+      if (resolvedId != null) {
+        await ProfileService.saveCatProfile(resolvedId, catProfile);
+        return resolvedId;
+      }
     }
+
+    return null;
+  } catch (e) {
+    debugPrint('Greška pri dodavanju mačke: $e');
+    return null;
   }
+}
+
+ Future<bool> updateCat(
+  int catId,
+  String name,
+  CatProfile catProfile,
+) async {
+  try {
+    final success = await CatApiService.updateCat(
+      baseUrl,
+      catId,
+      name,
+      catProfile,
+    );
+
+    if (success) {
+      // Sačuvaj i lokalni profil
+      await ProfileService.saveCatProfile(
+        catId,
+        catProfile,
+      );
+
+      // Osvježi listu mačaka
+      await fetchCats();
+    }
+
+    return success;
+  } catch (e) {
+    debugPrint('Greška pri ažuriranju mačke: $e');
+    return false;
+  }
+}
 
   Future<bool> deleteCat(int id) async {
     try {
@@ -331,46 +388,83 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     fetchCats();
   }
 
+  Future<void> _openAiDetection() async {
+    if (cats.isEmpty) {
+      _openAddCatScreen();
+      return;
+    }
+    final cat = cats.firstWhere((c) => c.id == selectedCatId, orElse: () => cats.first);
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => CameraScreen(catId: cat.id, catName: cat.name, baseUrl: baseUrl)));
+  }
+
+  Future<void> _openAiChat() async {
+    if (cats.isEmpty) {
+      _openAddCatScreen();
+      return;
+    }
+    final cat = cats.firstWhere((c) => c.id == selectedCatId, orElse: () => cats.first);
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(baseUrl: baseUrl, catId: cat.id, catName: cat.name)));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final List<Widget> screens = [
-      // 1. Device Tab
-      DeviceScreen(
+    final selectedCat = cats.where((c) => c.id == selectedCatId).isNotEmpty
+        ? cats.firstWhere((c) => c.id == selectedCatId)
+        : (cats.isEmpty ? null : cats.first);
+
+    final screens = [
+      ModernHomeScreen(
         foodLevel: foodLevel,
-        waterLevel: waterLevel,
+        waterLevel: waterLevel ?? 0,
         temp: temp,
         humidity: humidity,
-        isLoading: isLoadingDashboard,
-        cats: cats,
+        loading: isLoadingDashboard,
         connectionError: connectionError,
+        cats: cats,
+        selectedCatId: selectedCatId,
+        summaries: feedingSummaryByCat,
         baseUrl: baseUrl,
-        onSaveBaseUrl: updateBaseUrl,
         onRefresh: () async {
           await fetchSensorData();
           await fetchFeedingSummary();
         },
-      ),
-
-      // 2. Care Tab
-      CareScreen(
-        baseUrl: baseUrl,
-        cats: cats,
-        waterLevel: waterLevel,
-        selectedCatId: selectedCatId,
-        onSelectCat: selectCat,
-        feedingSummaryByCat: feedingSummaryByCat,
-        onAddCat: addCat,
-        onUpdateCat: updateCat,
         onFeedNow: feedCatNow,
+        onProfile: () => setState(() => _selectedIndex = 3),
+        onAddCat: _openAddCatScreen,
+        onOpenFeeder: () => setState(() => _selectedIndex = 2),
+        onOpenDetection: _openAiDetection,
+        onOpenChat: _openAiChat,
+        onSelectCat: selectCat,
       ),
-
-      // 3. Services Tab
-      ServicesScreen(
-        baseUrl: baseUrl,
+      ModernStatsScreen(
+        food: foodLevel,
+        water: waterLevel ?? 0,
+        temp: temp,
+        humidity: humidity,
         cats: cats,
+        selectedCatId: selectedCatId,
+        summaries: feedingSummaryByCat,
+        baseUrl: baseUrl,
+        onSelectCat: selectCat,
       ),
-
-      // 4. Me Tab (SettingsScreen)
+      ModernFeederScreen(
+        food: foodLevel,
+        water: waterLevel ?? 0,
+        cats: cats,
+        selectedCatId: selectedCatId,
+        onFeedNow: feedCatNow,
+        baseUrl: baseUrl,
+        onAddCat: _openAddCatScreen,
+        onBack: () => setState(() => _selectedIndex = 0),
+        onSelectCat: selectCat,
+      ),
+      ModernProfileScreen(
+        cats: cats,
+        selectedCatId: selectedCatId,
+        onAddCat: _openAddCatScreen,
+        onEdit: _openUpdateCatScreen,
+        onSelectCat: selectCat,
+      ),
       SettingsScreen(
         baseUrl: baseUrl,
         cats: cats,
@@ -392,49 +486,43 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return ValueListenableBuilder<String>(
       valueListenable: AppStrings.locale,
       builder: (context, _, __) => Scaffold(
-        body: screens[_selectedIndex],
-        bottomNavigationBar: Container(
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 12,
-                offset: const Offset(0, -3),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            child: BottomNavigationBar(
-              currentIndex: _selectedIndex,
-              onTap: (index) => setState(() => _selectedIndex = index),
-              selectedItemColor: AppColors.primary,
-              unselectedItemColor: Colors.grey,
-              backgroundColor: Colors.white,
-              type: BottomNavigationBarType.fixed,
-              selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
-              items: [
-                BottomNavigationBarItem(
-                  icon: const Icon(Icons.devices_rounded),
-                  activeIcon: const _ActiveNavIcon(icon: Icons.devices_rounded),
-                  label: AppStrings.t('device'),
+        backgroundColor: AppColors.background,
+        body: IndexedStack(index: _selectedIndex, children: screens),
+        bottomNavigationBar: SafeArea(
+          top: false,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+            decoration: BoxDecoration(
+              color: AppColors.navBackground,
+              border: const Border(top: BorderSide(color: AppColors.cardBorder)),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(.045), blurRadius: 22, offset: const Offset(0, -5))],
+            ),
+            child: Row(
+              children: [
+                _NavItem(icon: Icons.home_rounded, label: 'Početna', selected: _selectedIndex == 0, onTap: () => setState(() => _selectedIndex = 0)),
+                _NavItem(icon: Icons.insights_rounded, label: 'Statistika', selected: _selectedIndex == 1, onTap: () => setState(() => _selectedIndex = 1)),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedIndex = 2),
+                    child: Transform.translate(
+                      offset: const Offset(0, -20),
+                      child: Container(
+                        height: 62,
+                        width: 62,
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.navBackground, width: 5),
+                          boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(.22), blurRadius: 18, offset: const Offset(0, 8))],
+                        ),
+                        child: const Center(child: AppLogo(size: 36, color: Colors.white)),
+                      ),
+                    ),
+                  ),
                 ),
-                BottomNavigationBarItem(
-                  icon: const Icon(Icons.favorite_rounded),
-                  activeIcon: const _ActiveNavIcon(icon: Icons.favorite_rounded),
-                  label: AppStrings.t('care'),
-                ),
-                BottomNavigationBarItem(
-                  icon: const Icon(Icons.grid_view_rounded),
-                  activeIcon: const _ActiveNavIcon(icon: Icons.grid_view_rounded),
-                  label: AppStrings.t('services'),
-                ),
-                BottomNavigationBarItem(
-                  icon: const Icon(Icons.person_rounded),
-                  activeIcon: const _ActiveNavIcon(icon: Icons.person_rounded),
-                  label: AppStrings.t('me'),
-                ),
+                _NavItem(icon: Icons.pets_rounded, label: 'Profil', selected: _selectedIndex == 3, onTap: () => setState(() => _selectedIndex = 3)),
+                _NavItem(icon: Icons.settings_rounded, label: 'Postavke', selected: _selectedIndex == 4, onTap: () => setState(() => _selectedIndex = 4)),
               ],
             ),
           ),
@@ -444,16 +532,25 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-class _ActiveNavIcon extends StatelessWidget {
+class _NavItem extends StatelessWidget {
   final IconData icon;
-  const _ActiveNavIcon({required this.icon});
-
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _NavItem({required this.icon, required this.label, required this.selected, required this.onTap});
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      decoration: BoxDecoration(color: AppColors.tint50, borderRadius: BorderRadius.circular(100)),
-      child: Icon(icon, color: AppColors.primary),
-    );
-  }
+  Widget build(BuildContext context) => Expanded(
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 21, color: selected ? AppColors.primary : AppColors.textMuted),
+          const SizedBox(height: 3),
+          Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 9.5, fontWeight: selected ? FontWeight.w900 : FontWeight.w600, color: selected ? AppColors.primary : AppColors.textMuted)),
+        ]),
+      ),
+    ),
+  );
 }

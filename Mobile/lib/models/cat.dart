@@ -24,18 +24,21 @@ class Cat {
     this.goals,
   });
 
-  factory Cat.fromJson(Map<String, dynamic> json) => Cat(
-        id: json['id'] as int,
-        name: (json['name'] as String?) ?? 'Mačka',
-        rfidTag: json['rfidTag'] as String?,
-        sex: json['sex'] as String?,
-        birthDate: json['birthDate'] != null ? DateTime.tryParse(json['birthDate'].toString()) : null,
-        breed: json['breed'] as String?,
-        isNeutered: json['isNeutered'] as bool?,
-        weightKg: (json['weightKg'] as num?)?.toDouble(),
-        personality: json['personality'] as String?,
-        goals: json['goals'] as String?,
-      );
+  factory Cat.fromJson(Map<String, dynamic> json) {
+    dynamic v(String key) => json[key] ?? json[key[0].toUpperCase() + key.substring(1)];
+    return Cat(
+      id: (v('id') as num).toInt(),
+      name: v('name')?.toString() ?? 'Mačka',
+      rfidTag: v('rfidTag')?.toString(),
+      sex: v('sex')?.toString(),
+      birthDate: v('birthDate') != null ? DateTime.tryParse(v('birthDate').toString()) : null,
+      breed: v('breed')?.toString(),
+      isNeutered: v('isNeutered') as bool?,
+      weightKg: (v('weightKg') as num?)?.toDouble(),
+      personality: v('personality')?.toString(),
+      goals: v('goals')?.toString(),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'name': name,

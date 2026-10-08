@@ -9,6 +9,7 @@ using Npgsql;
 using Scalar.AspNetCore;
 using System.Text;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Server sluša na PORT varijabli sa Railway-a

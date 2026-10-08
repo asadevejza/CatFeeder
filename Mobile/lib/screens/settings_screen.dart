@@ -1,13 +1,18 @@
-import 'dart:io';
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/cat_avatar_service.dart';
 import '../services/profile_service.dart';
+import '../services/user_avatar_service.dart';
 import '../models/cat.dart';
 import '../models/cat_profile.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_logo.dart';
 import '../localization/app_strings.dart';
 import 'server_address_screen.dart';
+
+enum _AvatarAction { gallery, camera, remove }
 
 class SettingsScreen extends StatefulWidget {
   final String baseUrl;
@@ -36,13 +41,17 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  Map<int, String> avatarPaths = {};
+  Map<int, Uint8List> avatarBytes = {};
   Map<int, CatProfile> profiles = {};
+  Uint8List? userAvatarBytes;
+  String? userDisplayName;
 
   @override
   void initState() {
     super.initState();
     _loadExtras();
+    _loadUserAvatar();
+    _loadUserName();
   }
 
   @override
@@ -52,19 +61,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadExtras() async {
-    final avatars = <int, String>{};
+    final avatars = <int, Uint8List>{};
     final loadedProfiles = await ProfileService.getAllCatProfiles();
     for (final cat in widget.cats) {
       final id = cat is Cat ? cat.id : (cat is Map ? cat['id'] as int : null);
       if (id == null) continue;
-      final path = await CatAvatarService.getAvatarPath(id);
-      if (path != null) avatars[id] = path;
+      final bytes = await CatAvatarService.getAvatarBytes(id);
+      if (bytes != null) avatars[id] = bytes;
     }
     if (!mounted) return;
     setState(() {
-      avatarPaths = avatars;
+      avatarBytes = avatars;
       profiles = loadedProfiles;
     });
+  }
+
+  Future<void> _loadUserAvatar() async {
+    final bytes = await UserAvatarService.getAvatarBytes();
+    if (mounted) setState(() => userAvatarBytes = bytes);
+  }
+
+  Future<void> _loadUserName() async { final name = await ProfileService.getUserDisplayName(); if (mounted) setState(() => userDisplayName = name); }
+
+  Future<void> _pickUserAvatar() async {
+    final action = await showModalBottomSheet<_AvatarAction>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
+      builder: (context) => SafeArea(child: Padding(padding: const EdgeInsets.fromLTRB(20, 12, 20, 24), child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(width: 42, height: 4, decoration: BoxDecoration(color: AppColors.cardBorder, borderRadius: BorderRadius.circular(10))),
+        const SizedBox(height: 18),
+        const Text('Profilna fotografija', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 8),
+        ListTile(leading: const Icon(Icons.photo_library_outlined), title: const Text('Galerija'), onTap: () => Navigator.pop(context, _AvatarAction.gallery)),
+        ListTile(leading: const Icon(Icons.camera_alt_outlined), title: const Text('Kamera'), onTap: () => Navigator.pop(context, _AvatarAction.camera)),
+        if (userAvatarBytes != null) ListTile(leading: const Icon(Icons.delete_outline, color: AppColors.danger), title: const Text('Ukloni fotografiju'), onTap: () => Navigator.pop(context, _AvatarAction.remove)),
+      ]))),
+    );
+    if (action == null) return;
+    if (action == _AvatarAction.remove) {
+      await UserAvatarService.removeAvatar();
+      if (mounted) setState(() => userAvatarBytes = null);
+      return;
+    }
+    try {
+      final source = action == _AvatarAction.camera ? ImageSource.camera : ImageSource.gallery;
+      final picked = await ImagePicker().pickImage(source: source, maxWidth: 1800, maxHeight: 1800, imageQuality: 95);
+      if (picked == null) return;
+      final path = await UserAvatarService.setAvatar(picked);
+      if (mounted) { final bytes = await UserAvatarService.getAvatarBytes(); setState(() => userAvatarBytes = bytes); }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ne mogu dodati fotografiju: $e')));
+    }
   }
 
   Future<void> _confirmLogout() async {
@@ -107,7 +155,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   shape: BoxShape.circle,
                   boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 14, offset: const Offset(0, 6))],
                 ),
-                child: const Icon(Icons.pets_rounded, color: Colors.white, size: 34),
+                child: const AppLogo(size: 42, color: Colors.white),
               ),
               const SizedBox(height: 18),
               const Text('CatFeeder', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
@@ -162,40 +210,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               const SizedBox(height: 12),
               // ================= HERO HEADER =================
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [AppColors.primary, AppColors.primaryDark],
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.28), blurRadius: 20, offset: const Offset(0, 8))],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 62,
-                      height: 62,
-                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.18), shape: BoxShape.circle),
-                      child: const Icon(Icons.person_rounded, color: Colors.white, size: 32),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            AuthService.currentUsername?.trim().isNotEmpty == true ? AuthService.currentUsername! : AppStrings.t('user'),
-                            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: Colors.white),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(AppStrings.t('welcome_back'), style: const TextStyle(fontSize: 12, color: Colors.white70)),
-                        ],
-                      ),
-                    ),
-                  ],
+              GestureDetector(
+                onTap: _pickUserAvatar,
+                child: Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: AppColors.cardBorder), boxShadow: [BoxShadow(color: Colors.black.withOpacity(.035), blurRadius: 20, offset: const Offset(0, 8))]),
+                  child: Row(children: [
+                    Stack(clipBehavior: Clip.none, children: [
+                      Container(width: 64, height: 64, padding: const EdgeInsets.all(2), decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [AppColors.primaryLight, AppColors.primary])), child: CircleAvatar(backgroundColor: AppColors.lavender, backgroundImage: userAvatarBytes == null ? null : MemoryImage(userAvatarBytes!), child: userAvatarBytes == null ? const Icon(Icons.person_rounded, color: AppColors.primary, size: 30) : null)),
+                      Positioned(right: -3, bottom: -2, child: Container(width: 25, height: 25, decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)), child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 12))),
+                    ]),
+                    const SizedBox(width: 15),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(userDisplayName?.trim().isNotEmpty == true ? userDisplayName! : (AuthService.currentUsername?.trim().isNotEmpty == true ? AuthService.currentUsername! : AppStrings.t('user')), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: AppColors.textDark)),
+                      const SizedBox(height: 4),
+                      Text(AppStrings.t('welcome_back'), style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    ])),
+                    const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+                  ]),
                 ),
               ),
               const SizedBox(height: 30),
@@ -222,7 +254,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ...widget.cats.map((cat) {
                   final id = cat is Cat ? cat.id : (cat is Map ? cat['id'] as int : 0);
                   final name = cat is Cat ? cat.name : (cat is Map ? (cat['name']?.toString() ?? '') : '');
-                  final avatarPath = avatarPaths[id];
+                  final avatarData = avatarBytes[id];
                   final profile = profiles[id];
                   final subtitleParts = <String>[
                     if (profile != null) '${profile.ageYears} ${AppStrings.t('years_suffix')}',
@@ -250,8 +282,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             child: CircleAvatar(
                               radius: 22,
                               backgroundColor: AppColors.tint50,
-                              backgroundImage: avatarPath != null ? FileImage(File(avatarPath)) : null,
-                              child: avatarPath == null ? const Text('🐈', style: TextStyle(fontSize: 20)) : null,
+                              backgroundImage: avatarData != null ? MemoryImage(avatarData) : null,
+                              child: avatarData == null ? const Text('🐈', style: TextStyle(fontSize: 20)) : null,
                             ),
                           ),
                           const SizedBox(width: 14),

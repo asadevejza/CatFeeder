@@ -15,6 +15,7 @@ import '../widgets/feedback_overlay.dart';
 import '../widgets/skeleton_box.dart';
 import '../services/weight_history_service.dart';
 import '../services/ai_insight_service.dart';
+import '../services/cat_api_service.dart';
 const List<String> _mjeseciBs = [
   'jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'avg', 'sep', 'okt', 'nov', 'dec',
 ];
@@ -53,7 +54,6 @@ class CareScreen extends StatefulWidget {
   @override
   State<CareScreen> createState() => _CareScreenState();
 }
-
 class _CareScreenState extends State<CareScreen> with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   Map<int, CatProfile> _catProfiles = {};
@@ -63,7 +63,7 @@ class _CareScreenState extends State<CareScreen> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadProfiles();
+    _loadProfiles(); // Inicijalno učitavanje pri otvaranju ekrana
   }
 
   @override
@@ -73,23 +73,37 @@ class _CareScreenState extends State<CareScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _loadProfiles() async {
-    var profiles = await ProfileService.getAllCatProfiles();
-    // Ako neka mačka (npr. dodana prije ove funkcije, ili preko drugog uređaja)
-    // nema lokalni profil, napravi podrazumijevani da Dashboard nikad ne ostane prazan.
-    bool seededAny = false;
+    final profiles = <int, CatProfile>{};
+
+    // 1. Dovuči ažurne profile direktno sa backend API-ja za svaku mačku
     for (final cat in widget.cats) {
-      if (!profiles.containsKey(cat.id)) {
-        final seeded = CatProfile(gender: 'Mužjak', breed: AppStrings.t('unknown_breed'), ageYears: 0, weightKg: 0);
-        await ProfileService.saveCatProfile(cat.id, seeded);
-        seededAny = true;
+      final remoteProfile = await CatApiService.getCatProfile(widget.baseUrl, cat.id);
+      if (remoteProfile != null) {
+        profiles[cat.id] = remoteProfile;
+      } else {
+        // Ako API ne vrati profil, pokušaj iz lokalnog servisa
+        final localProfile = await ProfileService.getCatProfile(cat.id);
+        if (localProfile != null) {
+          profiles[cat.id] = localProfile;
+        } else {
+          // Fallback default
+          profiles[cat.id] = CatProfile(
+            gender: 'Mužjak',
+            breed: AppStrings.t('unknown_breed'),
+            ageYears: 0,
+            weightKg: 0,
+          );
+        }
       }
     }
-    if (seededAny) profiles = await ProfileService.getAllCatProfiles();
+
+    // 2. Učitavanje avatara
     final avatars = <int, String>{};
     for (final cat in widget.cats) {
       final path = await CatAvatarService.getAvatarPath(cat.id);
       if (path != null) avatars[cat.id] = path;
     }
+
     if (!mounted) return;
     setState(() {
       _catProfiles = profiles;

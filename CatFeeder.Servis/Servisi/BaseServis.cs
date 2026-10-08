@@ -30,7 +30,7 @@ namespace CatFeeder.Servis.Servisi
 
         public async Task UpdateAsync(T obj)
         {
-            _dbContext.ChangeTracker.Clear();
+            // Pozivamo Update koji označava entitet kao Modified
             _dbContext.Set<T>().Update(obj);
             await _dbContext.SaveChangesAsync();
         }

@@ -66,7 +66,7 @@ namespace CatFeeder.Api.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateCat(int id, CatUpdateDto dto)
+        public async Task<ActionResult<CatDto>> UpdateCat(int id, CatUpdateDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.Name))
                 return BadRequest(new { error = "Ime mačke je obavezno." });
@@ -77,15 +77,19 @@ namespace CatFeeder.Api.Controllers
             existing.Name = dto.Name;
             existing.RfidTag = dto.RfidTag;
             existing.Sex = dto.Sex;
-            existing.BirthDate = dto.BirthDate;
+            existing.BirthDate = dto.BirthDate.HasValue
+    ? DateTime.SpecifyKind(dto.BirthDate.Value, DateTimeKind.Utc)
+    : existing.BirthDate;
             existing.Breed = dto.Breed;
             existing.IsNeutered = dto.IsNeutered;
             existing.WeightKg = dto.WeightKg;
             existing.Personality = dto.Personality;
             existing.Goals = dto.Goals;
+
             await _catServis.UpdateAsync(existing);
 
-            return NoContent();
+            // Vraćamo Ok sa ažuriranim podacima umjesto NoContent()
+            return Ok(ToDto(existing));
         }
 
         [HttpDelete("{id}")]

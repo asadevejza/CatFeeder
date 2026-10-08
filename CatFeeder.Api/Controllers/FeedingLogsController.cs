@@ -52,7 +52,6 @@ namespace CatFeeder.Api.Controllers
                 CatId = dto.CatId,
                 PortionGrams = dto.PortionGrams,
                 TriggeredBy = string.IsNullOrWhiteSpace(dto.TriggeredBy) ? "Manual" : dto.TriggeredBy,
-                // KORIŠTENJE UTC VREMENA ZA POSTGRESQL ACCURACY:
                 Timestamp = dto.Timestamp?.ToUniversalTime() ?? DateTime.UtcNow
             };
 
@@ -60,6 +59,7 @@ namespace CatFeeder.Api.Controllers
 
             return Ok(ToDto(log));
         }
+
         // 4. Provjeri kada je mačka zadnje hranjena (za upozorenje u appu)
         [HttpGet("cat/{catId}/last-activity")]
         public async Task<ActionResult<LastActivityDto>> GetLastActivity(int catId, [FromQuery] double overdueAfterHours = 10)
@@ -74,6 +74,49 @@ namespace CatFeeder.Api.Controllers
                 LastFeedingAt = last.Timestamp,
                 HoursSinceLastFeeding = hoursSince,
                 IsOverdue = hoursSince >= overdueAfterHours
+            });
+        }
+
+        // 5. Okidač za mjaukanje (Zvuk sa ESP32)
+        [HttpPost("meow-trigger")]
+        public async Task<ActionResult<MeowTriggerResponseDto>> HandleMeowTrigger([FromBody] MeowTriggerDto dto)
+        {
+            var cat = await _catServis.GetByIdAsync(dto.CatId);
+            if (cat == null)
+                return BadRequest(new { error = $"Mačka sa ID {dto.CatId} ne postoji." });
+
+            // 1. Provjera Cooldown perioda (npr. minimalno 2 sata između obroka)
+            var last = await _logServis.GetLastByCatIdAsync(dto.CatId);
+            if (last != null)
+            {
+                var hoursSinceLast = (DateTime.UtcNow - last.Timestamp).TotalHours;
+                if (hoursSinceLast < 2.0)
+                {
+                    return Ok(new MeowTriggerResponseDto
+                    {
+                        Triggered = false,
+                        DispenseFood = false,
+                        Message = $"Mjauk registrovan, ali je mačka nedavno jela (prije {hoursSinceLast:F1} sati). Cooldown aktivan."
+                    });
+                }
+            }
+
+            // 2. Ako je cooldown prošao, upisujemo novo hranjenje
+            var log = new FeedingLog
+            {
+                CatId = dto.CatId,
+                PortionGrams = 30, // Defaultna porcija ili izvuci iz postavki mačke
+                TriggeredBy = "Audio-Detection (Meow)",
+                Timestamp = DateTime.UtcNow
+            };
+
+            await _logServis.AddAsync(log);
+
+            return Ok(new MeowTriggerResponseDto
+            {
+                Triggered = true,
+                DispenseFood = true,
+                Message = "Detektovano mjaukanje. Doziranje hrane je odobreno!"
             });
         }
     }

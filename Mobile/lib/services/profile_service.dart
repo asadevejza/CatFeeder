@@ -30,6 +30,19 @@ class ProfileService {
     await prefs.setString(_catProfilesKey, encoded);
   }
 
+  static const _userDisplayNameKey = 'user_display_name';
+
+  static Future<String?> getUserDisplayName() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(_userDisplayNameKey)?.trim();
+    return value == null || value.isEmpty ? null : value;
+  }
+
+  static Future<void> saveUserDisplayName(String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_userDisplayNameKey, name.trim());
+  }
+
   // --- Kamera (uparivanje je samo UI simulacija — nema stvarnog video feeda) ---
   static const _cameraPairedKey = 'camera_paired';
   static const _cameraNameKey = 'camera_name';

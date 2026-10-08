@@ -11,6 +11,7 @@ import 'schedule_form_screen.dart';
 import '../theme/app_colors.dart';
 import 'add_cat_screen.dart';
 import '../models/cat_profile.dart';
+import '../widgets/app_logo.dart';
 
 // "Hrani" tab - kombinuje Dashboard (izbor mačke + ručno hranjenje) i
 // Care List (sedmični checklist rasporeda, filtriran po IZABRANOJ mački).
@@ -769,11 +770,7 @@ class _CatMoodWidgetState extends State<CatMoodWidget> with SingleTickerProvider
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 350),
                     transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
-                    child: Text(
-                      _showHappy ? '😻' : '🐱',
-                      key: ValueKey(_showHappy),
-                      style: const TextStyle(fontSize: 86),
-                    ),
+                    child: AppLogo(key: ValueKey(_showHappy), size: 104, color: _showHappy ? AppColors.primaryDark : AppColors.primary),
                   ),
                 ),
               ),

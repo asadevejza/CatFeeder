@@ -38,7 +38,7 @@ class ServicesScreen extends StatelessWidget {
               const SizedBox(height: 14),
               _ServiceCard(
                 icon: Icons.storefront_rounded,
-                color: Colors.deepOrange,
+                color: AppColors.gold,
                 title: AppStrings.t('store'),
                 subtitle: AppStrings.t('store_sub'),
                 onTap: () => ScaffoldMessenger.of(context).showSnackBar(

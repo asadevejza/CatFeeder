@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_logo.dart';
 import '../localization/app_strings.dart';
 
 // Prijava / registracija preko backenda (JWT). Prikazuje se dok korisnik
@@ -84,7 +85,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         width: 88,
                         height: 88,
                         decoration: BoxDecoration(color: Colors.white.withOpacity(0.16), shape: BoxShape.circle),
-                        child: const Icon(Icons.pets_rounded, color: Colors.white, size: 44),
+                        child: const AppLogo(size: 56, color: Colors.white),
                       ),
                     ),
                     const SizedBox(height: 22),
