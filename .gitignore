@@ -1,6 +1,7 @@
 # Tajne - NIKAD ne commituj ove fajlove (sadrže prave lozinke)
 .env
 CatFeeder.Api/appsettings.json
+appsettings.Development.json
 
 # .NET build folderi
 bin/
