@@ -9,7 +9,6 @@ using Npgsql;
 using Scalar.AspNetCore;
 using System.Text;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Server sluša na PORT varijabli sa Railway-a
@@ -42,7 +41,6 @@ if (string.IsNullOrEmpty(rawConnectionString))
 }
 
 string connString = rawConnectionString;
-
 if (rawConnectionString.StartsWith("postgres://") || rawConnectionString.StartsWith("postgresql://"))
 {
     var databaseUri = new Uri(rawConnectionString);
@@ -105,6 +103,7 @@ builder.Services.AddSingleton<CatDetectionServis>(_ =>
     new CatDetectionServis(Path.Combine(AppContext.BaseDirectory, "Models", "mobilenetv2-12.onnx")));
 builder.Services.AddHttpClient<ChatServis>();
 builder.Services.AddScoped<WeightLogServis>();
+
 var app = builder.Build();
 
 // Automatski primijeni EF Core migracije pri pokretanju
@@ -135,10 +134,6 @@ app.UseExceptionHandler(errorApp =>
 
 app.UseCors("DozvoliSve");
 
-// Omogućava serviranje Flutter Web fajlova iz wwwroot foldera
-app.UseDefaultFiles();
-app.UseStaticFiles();
-
 var configuredApiKey = app.Configuration["ApiKey"];
 if (string.IsNullOrWhiteSpace(configuredApiKey))
 {
@@ -152,11 +147,9 @@ app.Use(async (context, next) =>
     var isApiRoute = path.StartsWith("/api", StringComparison.OrdinalIgnoreCase);
     var isPreflight = HttpMethods.IsOptions(context.Request.Method);
 
-    // Zaobilazimo provjeru ako je u pitanju bazna /api ruta
     var isRootApiRoute = path.Equals("/api", StringComparison.OrdinalIgnoreCase) ||
                          path.Equals("/api/", StringComparison.OrdinalIgnoreCase);
 
-    // Primenjujemo X-Api-Key provjeru samo na /api pod-rute (osim ako nije opcija ili root)
     if (isApiRoute && !isPreflight && !isRootApiRoute)
     {
         var providedKey = context.Request.Headers["X-Api-Key"].ToString();
@@ -175,9 +168,13 @@ app.Use(async (context, next) =>
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers();
+// PREUSMJERAVANJE: Kada neko otvori korijenski link (http://localhost:5103/), automatski ga vodi na Scalar
+app.MapGet("/", async context =>
+{
+    context.Response.Redirect("/scalar/v1");
+    await Task.CompletedTask;
+});
 
-// Ako ruta nije API, preusmjeri na Flutter Web index.html
-app.MapFallbackToFile("index.html");
+app.MapControllers();
 
 app.Run();

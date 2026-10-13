@@ -1,175 +1,345 @@
 # 🐾 Smart Cat Feeder
 
-Kompletan IoT sistem za automatsko i ručno hranjenje mačaka, sa ESP32 hardverom, ASP.NET Core backend-om, SQL Server bazom, Flutter mobilnom aplikacijom i Docker kontejnerizacijom.
+> **Pametna IoT hranilica za mačke sa AI funkcionalnostima**
 
-## 📋 Opis projekta
+Smart Cat Feeder je full-stack IoT projekat koji objedinjuje **ESP32 mikrokontroler**, **ASP.NET Core Web API**, **Flutter mobilnu aplikaciju**, **SQL Server bazu podataka**, **Docker** i **vještačku inteligenciju (AI)** u jedinstven sistem za nadzor i upravljanje hranjenjem kućnih ljubimaca.
 
-Smart Cat Feeder je full-stack IoT projekat koji omogućava:
+Sistem omogućava praćenje stanja hranilice u realnom vremenu, upravljanje rasporedima hranjenja, automatsko i ručno hranjenje, analizu podataka te korištenje AI tehnologija za prepoznavanje mačke, pametne preporuke i razgovor sa AI asistentom.
 
-- 🍽️ **Doziranje hrane** — ručno preko app-a ili automatski po rasporedu
-- 💧 **Praćenje i dopunjavanje vode** (u razvoju — pumpa + senzor nivoa)
-- 🐱 **Podršku za više mačaka** — svaka sa svojom istorijom hranjenja i rasporedom
-- 📊 **Praćenje senzora** — nivo hrane, nivo vode, temperatura, vlažnost
-- 📅 **Raspored hranjenja** — po danima u sedmici i tačnom vremenu, čuva se i radi preko RTC-a bez interneta
-- 📱 **Mobilnu aplikaciju** — Android/iOS/Web, sa podešavanjem adrese servera direktno iz app-a
-- 🐳 **Docker** — baza (i backend) rade u kontejnerima na lokalnom računaru, podaci ostaju lokalni
+---
 
-## 🏗️ Arhitektura
+# ✨ Glavne funkcionalnosti
 
+## 📱 Mobilna aplikacija
+
+Flutter aplikacija omogućava:
+
+- 📊 Dashboard sa pregledom stanja hranilice
+- 🐱 Upravljanje mačkama (CRUD)
+- 🍽️ Ručno hranjenje
+- 📅 Upravljanje rasporedima hranjenja
+- 📖 Historiju hranjenja
+- 🌡️ Prikaz temperature i vlažnosti
+- 🥣 Prikaz nivoa hrane
+- 💧 Prikaz nivoa vode
+- ⚙️ Podešavanje adrese backend servera
+- ✅ Test konekcije sa serverom
+- 🔔 Lokalna obavještenja
+- 🤖 AI chat asistenta
+- 🐱 AI prepoznavanje mačke sa fotografije
+- 📊 AI analizu navika hranjenja
+
+Podržane platforme:
+
+- Android
+- iOS
+- Flutter Web
+
+---
+
+## 🌐 Backend
+
+Backend je razvijen koristeći **ASP.NET Core (.NET 10)**.
+
+Sadrži:
+
+- REST API
+- Clean/Layered Architecture
+- Entity Framework Core
+- SQL Server
+- Dependency Injection
+- Global Exception Handling
+- Validaciju zahtjeva
+- OpenAPI (Swagger)
+- CORS podršku
+- JWT autentifikaciju
+- X-Api-Key zaštitu
+
+---
+
+## 🤖 AI funkcionalnosti
+
+### 🐱 AI prepoznavanje mačke
+
+Backend koristi **ONNX Runtime** i **MobileNetV2** model za prepoznavanje mačke na fotografiji.
+
+Nakon detekcije sistem:
+
+- prepoznaje prisustvo mačke
+- bilježi rezultat u bazu
+- prikazuje rezultat korisniku
+- šalje lokalnu notifikaciju
+
+---
+
+### 🍽️ AI automatsko hranjenje
+
+Kada AI uspješno prepozna mačku, sistem može automatski evidentirati hranjenje koristeći planiranu porciju iz rasporeda.
+
+---
+
+### 💬 AI Chat Asistent
+
+Mobilna aplikacija omogućava razgovor sa AI asistentom koristeći **Groq API**.
+
+Korisnik može postavljati pitanja o:
+
+- ishrani
+- zdravlju
+- ponašanju
+- preporučenoj količini hrane
+- općoj brizi o mački
+
+---
+
+### 📊 AI analiza
+
+Sistem analizira:
+
+- prosječnu dnevnu porciju hrane
+- odstupanja u hranjenju
+- trend tjelesne težine
+- preporučenu količinu hrane (RER formula)
+- anomalije u navikama hranjenja
+
+---
+
+### 🔔 Pametna upozorenja
+
+Ako mačka nije hranjena određeni vremenski period, korisnik automatski dobija lokalnu notifikaciju.
+
+---
+
+# ⚡ ESP32 Hardver
+
+ESP32 predstavlja centralni dio sistema.
+
+Planirane/implementirane komponente:
+
+- ESP32 Dev Board
+- Servo motor
+- HX711 + Load Cell
+- HC-SR04 (hrana)
+- HC-SR04 (voda)
+- DHT22
+- DS3231 RTC
+- RC522 RFID
+- Pumpa za vodu
+- WiFi komunikacija
+
+ESP32 periodično šalje senzorska očitanja backend-u i izvršava komande za hranjenje.
+
+---
+
+# 🗄️ Baza podataka
+
+Za skladištenje podataka koristi se SQL Server.
+
+Čuvaju se:
+
+- mačke
+- rasporedi hranjenja
+- historija hranjenja
+- senzorska očitanja
+- AI detekcije
+- evidencija težine
+
+Baza koristi EF Core Migrations i Docker Volume za trajno čuvanje podataka.
+
+---
+
+# 🐳 Docker
+
+Docker omogućava jednostavno pokretanje kompletnog sistema.
+
+Servisi:
+
+- SQL Server
+- Backend
+- Docker Volume za bazu
+
+---
+
+# 📂 Struktura projekta
+
+```text
+CatFeeder
+│
+├── .github/
+│
+├── backend/
+│   ├── src/
+│   ├── tests/
+│   └── CatFeeder.sln
+│
+├── frontend/
+│   └── mobile/
+│
+├── database/
+│
+├── docker/
+│
+├── docs/
+│
+├── scripts/
+│
+├── README.md
+└── LICENSE
 ```
-┌─────────────┐        ┌────────────────────┐        ┌───────────────┐
-│    ESP32    │──HTTP─▶│   ASP.NET Core      │◀──────▶│  SQL Server   │
-│ + Senzori   │        │   Backend API       │ EF Core │  (Docker)     │
-│ + Servo     │◀───────│   (Docker host)     │        └───────────────┘
-│ + Pumpa     │        └────────────────────┘
-└─────────────┘                  ▲
-                                  │ REST API (JSON, CORS)
-                                  ▼
-                         ┌────────────────────┐
-                         │   Flutter App       │
-                         │   Android / iOS /   │
-                         │   Web (Safari, itd.) │
-                         └────────────────────┘
-```
 
-## 🚀 Značajke
+---
 
-### ESP32 Firmware *(u razvoju)*
-- WiFi povezivanje
-- Servo motor za doziranje hrane (MG996R/SG90)
-- Load cell + HX711 — precizno mjerenje težine hrane
-- HC-SR04 — nivo hrane u levku
-- DHT22 — temperatura i vlažnost
-- DS3231 RTC — raspored radi i bez interneta
-- RC522 RFID — prepoznavanje koje mačke jedu
-- Mini pumpa + MOSFET driver — automatsko dopunjavanje vode
-- Slanje očitavanja na backend (`POST /api/sensorreadings`)
+# 🛠️ Korištene tehnologije
 
-### Backend (ASP.NET Core Web API, .NET 10)
-- REST API sa punim CRUD-om za mačke, rasporede, hranjenja i senzorska očitavanja
-- Entity Framework Core + SQL Server, konekcija kroz Dependency Injection
-- Validacija ulaznih podataka sa jasnim porukama grešaka
-- Globalno rukovanje izuzecima (čitljiv JSON odgovor umjesto generičkog 500)
-- CORS podrška (za Flutter Web pristup)
-- OpenAPI dokument dostupan u Development modu
+## Backend
 
-### Mobilna app (Flutter)
-- Dashboard sa uživo statusom (nivo hrane, nivo vode, temperatura, vlažnost)
-- Ručno hranjenje sa izborom mačke, animiranom reakcijom mačke i porcijom
-- Dodavanje/uređivanje/brisanje mačaka
-- Puni CRUD za raspored hranjenja (dani u sedmici, vrijeme, količina)
-- Historija hranjenja i pregled rasporeda
-- Podešavanja — adresa backend servera se mijenja direktno iz app-a, uz test konekcije, bez diranja koda
+- ASP.NET Core 10
+- Entity Framework Core
+- SQL Server
+- Docker
 
-### Baza podataka
-- SQL Server 2022, pokreće se u Docker kontejneru
-- Trajno čuvanje podataka preko Docker volume-a (`sql_data`)
+## Frontend
 
-## 📦 Instalacija
+- Flutter
+- Dart
 
-### Preduslovi
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- [Flutter SDK](https://flutter.dev) + Android Studio (za Android build)
-- SQL Server Management Studio (SSMS) — opciono, za ručni uvid u bazu
-- PlatformIO ili Arduino IDE — za ESP32 firmware (kasnija faza)
+## AI
 
-### 1. Kloniranje repozitorija
+- ONNX Runtime
+- MobileNetV2
+- Groq API
+
+## Hardver
+
+- ESP32
+- HX711
+- HC-SR04
+- DHT22
+- DS3231 RTC
+- RC522 RFID
+- Servo Motor
+- Pumpa za vodu
+
+---
+
+# 🚀 Pokretanje projekta
+
+## Potrebni alati
+
+- .NET 10 SDK
+- Flutter SDK
+- Docker Desktop
+
+---
+
+## Kloniranje repozitorija
 
 ```bash
 git clone https://github.com/asadevejza/CatFeeder.git
+
 cd CatFeeder
 ```
 
-### 2. Konfiguracija tajni (.env i appsettings.json)
+---
 
-Lozinke se ne čuvaju u git-u — svako ko klonira repo pravi svoje lokalne kopije:
-
-```bash
-cp .env.example .env
-cp CatFeeder.Api/appsettings.json.example CatFeeder.Api/appsettings.json
-```
-
-Otvori oba fajla i unesi svoju lozinku (mora biti **ista** u oba — `.env` je za Docker/SQL Server, `appsettings.json` je ono što backend koristi da se poveže na tu istu bazu).
-
-### 3. Pokretanje baze (Docker)
-
-U root folderu projekta, gdje je `docker-compose.yml`:
+## Pokretanje baze
 
 ```bash
 docker compose up -d
 ```
 
-Ovo diže SQL Server na `localhost:14330` (mapiran zbog izbjegavanja sukoba sa eventualnim native SQL Server instalacijama na portu 1433).
+---
 
-### 4. Pokretanje backend-a
+## Pokretanje backend-a
 
 ```bash
-cd CatFeeder.Api
-dotnet ef database update --project ../CatFeeder.Data
+cd backend
+
+dotnet restore
+
+dotnet ef database update
+
 dotnet run
 ```
 
-Backend će slušati na `http://0.0.0.0:5103` — dostupan i lokalno i sa drugih uređaja na istoj mreži.
+---
 
-### 5. Pokretanje mobilne app
+## Pokretanje mobilne aplikacije
 
 ```bash
-cd Mobile
+cd frontend/mobile
+
 flutter pub get
+
 flutter run
 ```
 
-U app-u, na ekranu **Podešavanja**, unesi adresu backend servera:
-- Android Emulator: `http://10.0.2.2:5103/api`
-- Pravi telefon (ista WiFi mreža): `http://[LAN IP računara]:5103/api`
-- Flutter Web (iPhone Safari i sl.): `flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080`, pa isti LAN IP princip
+Nakon pokretanja potrebno je u aplikaciji unijeti adresu backend servera.
 
-## 🔧 Hardware setup *(sljedeća faza)*
+---
 
-Kompletna lista komponenti (elektronika, napajanje, mehanika, alat, i sistem za vodu) nalazi se u `docs/lista_za_kupovinu.docx`. Sažetak ključnih dijelova:
-
-- ESP32 Dev Board
-- Servo motor (doziranje hrane)
-- Load cell + HX711 (mjerenje težine)
-- HC-SR04 × 2 (nivo hrane i nivo vode)
-- DHT22 (temperatura/vlažnost)
-- DS3231 RTC modul
-- RC522 RFID modul
-- Mini pumpa za vodu + MOSFET/relej driver
-
-## 📖 API dokumentacija
-
-U Development modu, OpenAPI dokument je dostupan na:
-```
-http://localhost:5103/openapi/v1.json
-```
+# 📡 REST API
 
 Glavni endpointi:
 
-| Metoda | Ruta | Opis |
-|---|---|---|
-| GET/POST/PUT/DELETE | `/api/cats` | Upravljanje mačkama |
-| GET/POST | `/api/feedinglogs` | Historija hranjenja |
-| GET/POST/PUT/DELETE | `/api/feedingschedules` | Rasporedi hranjenja |
-| GET/POST | `/api/sensorreadings` | Očitavanja senzora (hrana, voda, temp, vlažnost) |
+| Metoda | Endpoint | Opis |
+|---------|----------|------|
+| GET / POST / PUT / DELETE | `/api/cats` | Upravljanje mačkama |
+| GET / POST | `/api/feedinglogs` | Historija hranjenja |
+| GET / POST / PUT / DELETE | `/api/feedingschedules` | Upravljanje rasporedima |
+| GET / POST | `/api/sensorreadings` | Očitavanja senzora |
+| POST | `/api/ai/detect` | AI prepoznavanje mačke |
+| POST | `/api/ai/chat` | AI Chat |
 
-## 🗺️ Status projekta
+---
 
-- [x] Backend (ASP.NET Core + SQL Server + Docker)
-- [x] Mobilna aplikacija (Flutter — Android, iOS/Web preko browsera)
-- [x] Podrška za više mačaka
-- [x] Raspored hranjenja (puni CRUD)
-- [x] Praćenje nivoa hrane i vode (softverski dio)
-- [ ] ESP32 firmware
-- [ ] Fizička montaža hranilice
-- [ ] Automatsko dopunjavanje vode (pumpa)
-- [ ] Udaljeni pristup van kućne mreže (Tailscale)
+# 📈 Trenutni status projekta
 
-## 📝 Licenca
+## ✅ Implementirano
 
-MIT License
+- ASP.NET Core Web API
+- Flutter mobilna aplikacija
+- SQL Server
+- Docker podrška
+- Upravljanje mačkama
+- Rasporedi hranjenja
+- Historija hranjenja
+- Više mačaka
+- Dashboard
+- AI prepoznavanje mačke
+- AI Chat
+- AI analiza hranjenja
+- Lokalne notifikacije
 
-## 👤 Autor
+---
 
-Asad Vejzović
+## 🚧 U razvoju
+
+- ESP32 firmware
+- Fizička montaža hranilice
+- Potpuna integracija senzora
+- Automatsko dopunjavanje vode
+
+---
+
+# 📸 Screenshotovi
+
+> Screenshotovi mobilne aplikacije i fotografije hardvera bit će dodani nakon završetka razvoja.
+
+---
+
+# 📄 Licenca
+
+Ovaj projekat je objavljen pod **MIT licencom**.
+
+---
+
+# 👨‍💻 Autor
+
+**Asad Vejzović**
+
+GitHub: https://github.com/asadevejza
+
+---
+
+⭐ Ako vam se projekat sviđa ili vam je bio koristan, ostavite **Star** na GitHub repozitoriju.
