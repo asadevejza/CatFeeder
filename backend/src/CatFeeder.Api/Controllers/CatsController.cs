@@ -1,0 +1,105 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
+using CatFeeder.Data.Modeli;
+using CatFeeder.Servis.Servisi;
+using CatFeeder.Api.Dtos;
+
+namespace CatFeeder.Api.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class CatsController : ControllerBase
+    {
+        private readonly CatServis _catServis;
+
+        public CatsController(CatServis catServis)
+        {
+            _catServis = catServis;
+        }
+
+        // Id ulogovanog korisnika iz JWT tokena (postavljen u AuthController.BuildToken).
+        private int CurrentUserId =>
+            int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub")!);
+
+        private static CatDto ToDto(Cat cat) => new(
+            cat.Id, cat.Name, cat.RfidTag, cat.Sex, cat.BirthDate, cat.Breed,
+            cat.IsNeutered, cat.WeightKg, cat.Personality, cat.Goals
+        );
+
+        [HttpGet]
+        public async Task<ActionResult<List<CatDto>>> GetCats()
+        {
+            var cats = await _catServis.GetAllForUserAsync(CurrentUserId);
+            return cats.Select(ToDto).ToList();
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<CatDto>> GetCat(int id)
+        {
+            var cat = await _catServis.GetByIdForUserAsync(id, CurrentUserId);
+            if (cat == null) return NotFound();
+            return ToDto(cat);
+        }
+
+        [HttpPost]
+        public async Task<ActionResult<CatDto>> CreateCat(CatCreateDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Name))
+                return BadRequest(new { error = "Ime mačke je obavezno." });
+
+            var cat = new Cat
+            {
+                UserId = CurrentUserId,
+                Name = dto.Name,
+                RfidTag = dto.RfidTag,
+                Sex = dto.Sex,
+                BirthDate = dto.BirthDate,
+                Breed = dto.Breed,
+                IsNeutered = dto.IsNeutered,
+                WeightKg = dto.WeightKg,
+                Personality = dto.Personality,
+                Goals = dto.Goals,
+            };
+            await _catServis.AddAsync(cat);
+
+            return CreatedAtAction(nameof(GetCat), new { id = cat.Id }, ToDto(cat));
+        }
+
+        [HttpPut("{id}")]
+        public async Task<ActionResult<CatDto>> UpdateCat(int id, CatUpdateDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Name))
+                return BadRequest(new { error = "Ime mačke je obavezno." });
+
+            var existing = await _catServis.GetByIdForUserAsync(id, CurrentUserId);
+            if (existing == null) return NotFound();
+
+            existing.Name = dto.Name;
+            existing.RfidTag = dto.RfidTag;
+            existing.Sex = dto.Sex;
+            existing.BirthDate = dto.BirthDate.HasValue
+    ? DateTime.SpecifyKind(dto.BirthDate.Value, DateTimeKind.Utc)
+    : existing.BirthDate;
+            existing.Breed = dto.Breed;
+            existing.IsNeutered = dto.IsNeutered;
+            existing.WeightKg = dto.WeightKg;
+            existing.Personality = dto.Personality;
+            existing.Goals = dto.Goals;
+
+            await _catServis.UpdateAsync(existing);
+
+            // Vraćamo Ok sa ažuriranim podacima umjesto NoContent()
+            return Ok(ToDto(existing));
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteCat(int id)
+        {
+            var cat = await _catServis.GetByIdForUserAsync(id, CurrentUserId);
+            if (cat == null) return NotFound();
+
+            await _catServis.ObrisiAsync(cat);
+            return NoContent();
+        }
+    }
+}

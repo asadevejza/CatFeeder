@@ -1,0 +1,19 @@
+# Tajne - NIKAD ne commituj ove fajlove (sadrže prave lozinke)
+.env
+CatFeeder.Api/appsettings.json
+
+# .NET build folderi
+bin/
+obj/
+*.user
+
+# Visual Studio
+.vs/
+
+# Flutter build (Mobile folder ima svoj .gitignore za detalje, ovo je dodatna zaštita)
+Mobile/build/
+Mobile/.dart_tool/
+
+# OS smeće
+.DS_Store
+Thumbs.db

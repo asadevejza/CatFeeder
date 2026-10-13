@@ -1,0 +1,497 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:http/http.dart' as http;
+import '../api_config.dart';
+import '../models/cat.dart';
+import '../services/notification_service.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/skeleton_box.dart';
+import 'schedule_form_screen.dart';
+import '../theme/app_colors.dart';
+import '../localization/app_strings.dart';
+
+class SchedulesAndLogsScreen extends StatefulWidget {
+  final String baseUrl;
+  final List<Cat> cats;
+  const SchedulesAndLogsScreen({super.key, required this.baseUrl, required this.cats});
+
+  @override
+  State<SchedulesAndLogsScreen> createState() => _SchedulesAndLogsScreenState();
+}
+
+
+class _SchedulesAndLogsScreenState extends State<SchedulesAndLogsScreen> with SingleTickerProviderStateMixin {
+  List<dynamic> logs = [];
+  List<dynamic> schedules = [];
+  bool isLoading = true;
+
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() => setState(() {})); // za prikaz/skrivanje FAB-a
+    loadData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  String catName(dynamic catId) {
+    final match = widget.cats.where((c) => c.id == catId);
+    return match.isNotEmpty ? match.first.name : AppStrings.t('unknown_cat');
+  }
+
+  // Zbraja ukupne grame hrane po danu, za posljednjih 7 dana (uključujući danas).
+  // Vraća mapu gdje je ključ ponoć tog dana, poredanu od najstarijeg ka najnovijem.
+  Map<DateTime, double> last7DaysTotals() {
+    final today = DateTime.now();
+    final days = List.generate(
+      7,
+      (i) => DateTime(today.year, today.month, today.day).subtract(Duration(days: 6 - i)),
+    );
+    final totals = {for (final d in days) d: 0.0};
+
+    for (final log in logs) {
+      final rawTimestamp = log['timestamp'];
+      if (rawTimestamp == null) continue;
+      DateTime parsed;
+      try {
+        parsed = DateTime.parse(rawTimestamp.toString());
+      } catch (_) {
+        continue;
+      }
+      final dayKey = DateTime(parsed.year, parsed.month, parsed.day);
+      if (totals.containsKey(dayKey)) {
+        final grams = (log['portionGrams'] as num?)?.toDouble() ?? 0.0;
+        totals[dayKey] = totals[dayKey]! + grams;
+      }
+    }
+    return totals;
+  }
+
+  static const Map<String, String> _daysBosanski = {
+    'monday': 'Ponedjeljak',
+    'mon': 'Pon',
+    'tuesday': 'Utorak',
+    'tue': 'Uto',
+    'tues': 'Uto',
+    'wednesday': 'Srijeda',
+    'wed': 'Sri',
+    'thursday': 'Četvrtak',
+    'thu': 'Čet',
+    'thurs': 'Čet',
+    'friday': 'Petak',
+    'fri': 'Pet',
+    'saturday': 'Subota',
+    'sat': 'Sub',
+    'sunday': 'Nedjelja',
+    'sun': 'Ned',
+  };
+
+  static const Map<String, String> _daysEnglish = {
+    'monday': 'Monday',
+    'mon': 'Mon',
+    'tuesday': 'Tuesday',
+    'tue': 'Tue',
+    'tues': 'Tue',
+    'wednesday': 'Wednesday',
+    'wed': 'Wed',
+    'thursday': 'Thursday',
+    'thu': 'Thu',
+    'thurs': 'Thu',
+    'friday': 'Friday',
+    'fri': 'Fri',
+    'saturday': 'Saturday',
+    'sat': 'Sat',
+    'sunday': 'Sunday',
+    'sun': 'Sun',
+  };
+
+  // Prima npr. "Monday,Wednesday,Friday" i vraća prevedene nazive dana,
+  // prema trenutno izabranom jeziku aplikacije.
+  String translateDays(String? raw) {
+    if (raw == null || raw.isEmpty) return '';
+    final dict = AppStrings.locale.value == 'en' ? _daysEnglish : _daysBosanski;
+    return raw
+        .split(',')
+        .map((d) => d.trim())
+        .map((d) => dict[d.toLowerCase()] ?? d)
+        .join(', ');
+  }
+
+  Future<void> loadData() async {
+    setState(() => isLoading = true);
+    try {
+      final logsResponse = await http.get(Uri.parse('${widget.baseUrl}/feedinglogs'), headers: apiHeaders());
+      final schedulesResponse = await http.get(Uri.parse('${widget.baseUrl}/feedingschedules'), headers: apiHeaders());
+      if (!mounted) return;
+
+      if (logsResponse.statusCode == 200 && schedulesResponse.statusCode == 200) {
+        setState(() {
+          logs = json.decode(logsResponse.body).reversed.toList();
+          schedules = json.decode(schedulesResponse.body);
+          isLoading = false;
+        });
+        _syncScheduleNotifications();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${AppStrings.t('error_reading_history_prefix')}$e')),
+      );
+    }
+  }
+
+  // Ponovo zakazuje notifikacije za sve trenutne rasporede — poziva se nakon
+  // svakog učitavanja da podsjetnici uvijek odgovaraju stanju u bazi (npr. i
+  // nakon reinstalacije app-a, kad bi lokalno zakazani alarmi bili izgubljeni).
+  Future<void> _syncScheduleNotifications() async {
+    for (final schedule in schedules) {
+      final id = schedule['id'] as int?;
+      if (id == null) continue;
+      await NotificationService.scheduleForFeedingSchedule(
+        scheduleId: id,
+        catName: catName(schedule['catId']),
+        timeString: (schedule['time'] as String?) ?? '08:00:00',
+        portionGrams: (schedule['portionGrams'] as num?)?.toInt() ?? 0,
+        daysOfWeekCsv: (schedule['daysOfWeek'] as String?) ?? '',
+      );
+    }
+  }
+
+  // "07:30:00" -> "07:30"
+  String formatTime(dynamic raw) {
+    if (raw == null) return '';
+    final parts = raw.toString().split(':');
+    if (parts.length < 2) return raw.toString();
+    return '${parts[0]}:${parts[1]}';
+  }
+
+  Future<void> deleteSchedule(int id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(AppStrings.t('delete_schedule_q')),
+        content: Text(AppStrings.t('action_irreversible')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(AppStrings.t('cancel'))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(AppStrings.t('delete'), style: const TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    try {
+      final response = await http.delete(Uri.parse('${widget.baseUrl}/feedingschedules/$id'), headers: apiHeaders());
+      if (!mounted) return;
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        await NotificationService.cancelForSchedule(id);
+        loadData();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppStrings.t('delete_failed'))));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${AppStrings.t('error_prefix')}$e')));
+    }
+  }
+
+  Future<void> openScheduleForm({Map<String, dynamic>? existing}) async {
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ScheduleFormScreen(
+          baseUrl: widget.baseUrl,
+          cats: widget.cats,
+          existingSchedule: existing,
+        ),
+      ),
+    );
+    if (saved == true) loadData();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<String>(
+      valueListenable: AppStrings.locale,
+      builder: (context, _, __) => Scaffold(
+        appBar: AppBar(
+          title: Text(AppStrings.t('activities_title')),
+          bottom: TabBar(
+            controller: _tabController,
+            labelColor: AppColors.primary,
+            unselectedLabelColor: Colors.black45,
+            indicatorColor: AppColors.primary,
+            tabs: [
+              Tab(text: AppStrings.t('history_tab')),
+              Tab(text: AppStrings.t('schedules_tab')),
+            ],
+          ),
+        ),
+        floatingActionButton: _tabController.index == 1
+            ? FloatingActionButton.extended(
+                onPressed: () => openScheduleForm(),
+                backgroundColor: AppColors.primary,
+                icon: const Icon(Icons.add),
+                label: Text(AppStrings.t('new_schedule')),
+              )
+            : null,
+        body: isLoading
+            ? const _LogsSkeletonLoader()
+            : TabBarView(
+                controller: _tabController,
+                children: [
+                  RefreshIndicator(
+                    onRefresh: loadData,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: logs.isEmpty ? 2 : logs.length + 1,
+                      itemBuilder: (context, index) {
+                        if (index == 0) {
+                          return _WeeklyFeedingChart(dailyTotals: last7DaysTotals());
+                        }
+                        if (logs.isEmpty) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: EmptyState(
+                              icon: Icons.restaurant_rounded,
+                              title: AppStrings.t('no_feedings_logged'),
+                              subtitle: AppStrings.t('no_feedings_logged_sub'),
+                            ),
+                          );
+                        }
+                        final log = logs[index - 1];
+                        return Container(
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+                          ),
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(colors: [Color(0xFF7ED957), Color(0xFF4CAF50)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                                shape: BoxShape.circle,
+                                boxShadow: [BoxShadow(color: Colors.green.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))],
+                              ),
+                              child: const Icon(Icons.check_rounded, color: Colors.white),
+                            ),
+                            title: Text('${catName(log['catId'])} • ${log['portionGrams']}g',
+                                style: const TextStyle(fontWeight: FontWeight.w700)),
+                            subtitle: Text('${AppStrings.t('triggered_by_prefix')}${log['triggeredBy']}'),
+                            trailing: Text(
+                              log['timestamp'] != null ? log['timestamp'].toString().substring(11, 16) : '',
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  RefreshIndicator(
+                    onRefresh: loadData,
+                    child: schedules.isEmpty
+                        ? ListView(
+                            padding: const EdgeInsets.all(18),
+                            children: [
+                              EmptyState(
+                                icon: Icons.alarm_add_rounded,
+                                title: AppStrings.t('no_schedules'),
+                                subtitle: AppStrings.t('no_schedules_sub'),
+                                actionLabel: AppStrings.t('new_schedule'),
+                                onAction: () => openScheduleForm(),
+                              ),
+                            ],
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.only(left: 12, right: 12, top: 12, bottom: 90),
+                            itemCount: schedules.length,
+                            itemBuilder: (context, index) {
+                              final schedule = schedules[index];
+                              return Container(
+                                margin: const EdgeInsets.symmetric(vertical: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(18),
+                                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+                                ),
+                                child: ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  onTap: () => openScheduleForm(existing: schedule as Map<String, dynamic>),
+                                  leading: Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(colors: [AppColors.primaryLight, AppColors.primary], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                                      shape: BoxShape.circle,
+                                      boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))],
+                                    ),
+                                    child: const Icon(Icons.alarm_rounded, color: Colors.white),
+                                  ),
+                                  title: Text('${catName(schedule['catId'])} • ${formatTime(schedule['time'])}',
+                                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                                  subtitle: Text('${AppStrings.t('amount_prefix')}${schedule['portionGrams']}g (${translateDays(schedule['daysOfWeek'] as String?)})'),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                    onPressed: () => deleteSchedule(schedule['id'] as int),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+    ));
+  }
+}
+
+
+// ================= GRAFIKON — HRANA POJEDENA PO DANU (7 DANA) =================
+class _WeeklyFeedingChart extends StatelessWidget {
+  final Map<DateTime, double> dailyTotals;
+  const _WeeklyFeedingChart({required this.dailyTotals});
+
+  static const List<String> _dayLabelsBs = ['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned'];
+  static const List<String> _dayLabelsEn = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  List<String> get _dayLabels => AppStrings.locale.value == 'en' ? _dayLabelsEn : _dayLabelsBs;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = dailyTotals.entries.toList();
+    final maxValue = entries.map((e) => e.value).fold<double>(0, (a, b) => a > b ? a : b);
+    final chartMaxY = maxValue <= 0 ? 100.0 : maxValue * 1.35;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 14, offset: const Offset(0, 5))],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 20, 20, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 10, bottom: 18),
+              child: Text(AppStrings.t('last_7_days'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
+            SizedBox(
+              height: 170,
+              child: BarChart(
+                BarChartData(
+                  maxY: chartMaxY,
+                  minY: 0,
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.shade100, strokeWidth: 1),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  barTouchData: BarTouchData(
+                    touchTooltipData: BarTouchTooltipData(
+                      getTooltipColor: (_) => AppColors.primary,
+                      tooltipBorderRadius: BorderRadius.circular(10),
+                      getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
+                        '${rod.toY.toStringAsFixed(0)}g',
+                        const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 26,
+                        getTitlesWidget: (value, meta) {
+                          final index = value.toInt();
+                          if (index < 0 || index >= entries.length) return const SizedBox.shrink();
+                          final weekday = entries[index].key.weekday; // 1 = ponedjeljak ... 7 = nedjelja
+                          final isToday = index == entries.length - 1;
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              _dayLabels[weekday - 1],
+                              style: TextStyle(fontSize: 11, fontWeight: isToday ? FontWeight.w800 : FontWeight.normal, color: isToday ? AppColors.primary : Colors.black54),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  barGroups: [
+                    for (int i = 0; i < entries.length; i++)
+                      BarChartGroupData(
+                        x: i,
+                        barRods: [
+                          BarChartRodData(
+                            toY: entries[i].value,
+                            width: 20,
+                            borderRadius: BorderRadius.circular(6),
+                            gradient: entries[i].value > 0
+                                ? LinearGradient(
+                                    begin: Alignment.bottomCenter,
+                                    end: Alignment.topCenter,
+                                    colors: i == entries.length - 1
+                                        ? [AppColors.primaryDark, AppColors.primary]
+                                        : [AppColors.primary.withOpacity(0.55), AppColors.primaryLight.withOpacity(0.75)],
+                                  )
+                                : null,
+                            color: entries[i].value > 0 ? null : AppColors.tint100,
+                            backDrawRodData: BackgroundBarChartRodData(show: true, toY: chartMaxY, color: Colors.grey.shade50),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Skeleton prikaz dok se učitavaju historija/rasporedi hranjenja.
+class _LogsSkeletonLoader extends StatelessWidget {
+  const _LogsSkeletonLoader();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(18),
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        SkeletonBox(height: 210, borderRadius: BorderRadius.circular(20)),
+        const SizedBox(height: 18),
+        for (int i = 0; i < 4; i++) ...[
+          SkeletonBox(height: 64, borderRadius: BorderRadius.circular(18)),
+          const SizedBox(height: 10),
+        ],
+      ],
+    );
+  }
+}
