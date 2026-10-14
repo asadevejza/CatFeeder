@@ -8,6 +8,8 @@ using Microsoft.IdentityModel.Tokens;
 using Npgsql;
 using Scalar.AspNetCore;
 using System.Text;
+using CatFeeder.Servis.Servisi;
+using CatFeeder.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -104,6 +106,7 @@ builder.Services.AddSingleton<CatDetectionServis>(_ =>
 builder.Services.AddHttpClient<ChatServis>();
 builder.Services.AddScoped<WeightLogServis>();
 builder.Services.AddScoped<FeedingCommandServis>();
+builder.Services.AddHostedService<FeedingSchedulerBackgroundService>();
 var app = builder.Build();
 
 // Automatski primijeni EF Core migracije pri pokretanju
