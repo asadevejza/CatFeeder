@@ -119,25 +119,37 @@ class _FeedingScreenState extends State<FeedingScreen> with SingleTickerProvider
     if (widget.selectedCatId == null) return;
     setState(() => isFeeding = true);
     try {
-      final response = await http.post(
-        Uri.parse('${widget.baseUrl}/feedinglogs'),
-        headers: apiHeaders(withJsonBody: true),
-        body: json.encode({
-          'catId': widget.selectedCatId,
-          'portionGrams': selectedPortion,
-          'triggeredBy': 'Manual (App)',
-        }),
-      );
+  final response = await http.post(
+  Uri.parse('${widget.baseUrl}/feedingcommands'),
+  headers: apiHeaders(withJsonBody: true),
+  body: json.encode({
+    "durationSeconds": 2,
+  }),
+);
+
+print("STATUS: ${response.statusCode}");
+print("BODY: ${response.body}");
 
       if (!mounted) return;
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        widget.onFedSuccess(selectedPortion);
-        final catName = widget.cats.firstWhere((c) => c.id == widget.selectedCatId).name;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Uspješno ispušteno $selectedPortion g hrane za $catName! 🐾')),
-        );
-        loadSchedulesAndLogs(); // da se Care List odmah ažurira (checkmark)
-      } else {
+      if (response.statusCode == 200 || response.statusCode == 201) {
+
+  await createFeedingLog();
+
+  widget.onFedSuccess(selectedPortion);
+
+  final catName =
+      widget.cats.firstWhere((c) => c.id == widget.selectedCatId).name;
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        'Uspješno poslana komanda za hranjenje $catName 🐾',
+      ),
+    ),
+  );
+
+  loadSchedulesAndLogs();
+} else {
         throw Exception('Greška na serveru');
       }
     } catch (e) {
@@ -149,7 +161,22 @@ class _FeedingScreenState extends State<FeedingScreen> with SingleTickerProvider
       if (mounted) setState(() => isFeeding = false);
     }
   }
+  Future<void> createFeedingLog() async {
+  final response = await http.post(
+    Uri.parse('${widget.baseUrl}/feedinglogs'),
+    headers: apiHeaders(withJsonBody: true),
+    body: json.encode({
+      "catId": widget.selectedCatId,
+      "portionGrams": selectedPortion,
+      "triggeredBy": "ESP32",
+    }),
+  );
 
+  if (response.statusCode != 201 &&
+      response.statusCode != 200) {
+    throw Exception("Feeding log nije sačuvan.");
+  }
+}
   // ============ MAČKE (dodaj/uredi/obriši) ============
 
   void openAddCatProfile() {

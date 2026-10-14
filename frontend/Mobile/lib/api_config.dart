@@ -6,7 +6,8 @@ import 'services/auth_service.dart';
 const int totalCapacityGrams = 2000;
 
 // Produkcijska adresa backend servera na Railway-u.
-const String defaultBaseUrl = 'http://localhost:5103/api';
+const String defaultBaseUrl =
+'https://drinks-ward-pretty-listprice.trycloudflare.com/api';
 
 // Obavezni API Ključ koji odgovara vrijednosti u Railway varijablama.
 const String apiKey = '82fUSgPL8mUSKGoLvUYK1U9Bl7NraNrkbxhLqvgfTvU';

@@ -95,6 +95,28 @@ namespace CatFeeder.Data.Migrations
                     b.ToTable("DetectionLogs");
                 });
 
+            modelBuilder.Entity("CatFeeder.Data.Modeli.FeedingCommand", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DurationSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Executed")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("FeedingCommands");
+                });
+
             modelBuilder.Entity("CatFeeder.Data.Modeli.FeedingLog", b =>
                 {
                     b.Property<int>("Id")

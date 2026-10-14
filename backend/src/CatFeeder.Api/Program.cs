@@ -103,7 +103,7 @@ builder.Services.AddSingleton<CatDetectionServis>(_ =>
     new CatDetectionServis(Path.Combine(AppContext.BaseDirectory, "Models", "mobilenetv2-12.onnx")));
 builder.Services.AddHttpClient<ChatServis>();
 builder.Services.AddScoped<WeightLogServis>();
-
+builder.Services.AddScoped<FeedingCommandServis>();
 var app = builder.Build();
 
 // Automatski primijeni EF Core migracije pri pokretanju
@@ -153,11 +153,21 @@ app.Use(async (context, next) =>
     if (isApiRoute && !isPreflight && !isRootApiRoute)
     {
         var providedKey = context.Request.Headers["X-Api-Key"].ToString();
-        if (string.IsNullOrEmpty(providedKey) || providedKey != configuredApiKey)
+
+        Console.WriteLine("=====================================");
+        Console.WriteLine($"PATH: {path}");
+        Console.WriteLine($"Primljeni ključ : '{providedKey}'");
+        Console.WriteLine($"Očekivani ključ : '{configuredApiKey}'");
+        Console.WriteLine("=====================================");
+
+        if (string.IsNullOrWhiteSpace(providedKey) || providedKey != configuredApiKey)
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             context.Response.ContentType = "application/json";
-            await context.Response.WriteAsJsonAsync(new { error = "Nevažeći ili nedostajući API ključ." });
+            await context.Response.WriteAsJsonAsync(new
+            {
+                error = "Nevažeći ili nedostajući API ključ."
+            });
             return;
         }
     }

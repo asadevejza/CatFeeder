@@ -14,7 +14,7 @@ import '../models/cat_profile.dart';
 import '../theme/app_colors.dart';
 import '../services/cat_api_service.dart';
 import '../widgets/app_logo.dart';
-
+import 'package:flutter/foundation.dart';
 import 'device_screen.dart';
 import 'care_screen.dart';
 import 'services_screen.dart';
@@ -221,25 +221,40 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   Future<bool> feedCatNow(int catId, int portionGrams) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/feedinglogs'),
-        headers: apiHeaders(withJsonBody: true),
-        body: json.encode({
-          'catId': catId,
-          'portionGrams': portionGrams,
-          'triggeredBy': 'Manual (App)',
-        }),
-      );
-      if (response.statusCode != 200 && response.statusCode != 201) return false;
-      await fetchFeedingSummary();
-      await fetchSensorData();
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
+  try {
+    // 1) Komanda za ESP32 (servo)
+    final commandResponse = await http.post(
+      Uri.parse('$baseUrl/feedingcommands'),
+      headers: apiHeaders(withJsonBody: true),
+      body: json.encode({'durationSeconds': 2}),
+    );
 
+    debugPrint('FEED COMMAND: ${commandResponse.statusCode} ${commandResponse.body}');
+
+    if (commandResponse.statusCode != 200 && commandResponse.statusCode != 201) {
+      return false; // ako komanda ne ode, ne upisuj log
+    }
+
+    // 2) Log hranjenja (historija / statistika)
+    final logResponse = await http.post(
+      Uri.parse('$baseUrl/feedinglogs'),
+      headers: apiHeaders(withJsonBody: true),
+      body: json.encode({
+        'catId': catId,
+        'portionGrams': portionGrams,
+        'triggeredBy': 'Manual (App)',
+      }),
+    );
+    if (logResponse.statusCode != 200 && logResponse.statusCode != 201) return false;
+
+    await fetchFeedingSummary();
+    await fetchSensorData();
+    return true;
+  } catch (e) {
+    debugPrint('feedCatNow greška: $e');
+    return false;
+  }
+}
   // --- KORIŠTENJE CAT API SERVISA ZA ČUVANJE NA SERVER ---
 Future<int?> addCat(
   String name,

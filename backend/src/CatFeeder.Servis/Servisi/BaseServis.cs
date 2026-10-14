@@ -24,8 +24,25 @@ namespace CatFeeder.Servis.Servisi
 
         public async Task AddAsync(T obj)
         {
-            _dbContext.Set<T>().Add(obj);
-            await _dbContext.SaveChangesAsync();
+            try
+            {
+                _dbContext.Set<T>().Add(obj);
+                await _dbContext.SaveChangesAsync();
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+            {
+                Console.WriteLine("===== DB UPDATE EXCEPTION =====");
+                Console.WriteLine(ex.Message);
+
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine("===== INNER EXCEPTION =====");
+                    Console.WriteLine(ex.InnerException.Message);
+                    Console.WriteLine(ex.InnerException.ToString());
+                }
+
+                throw;
+            }
         }
 
         public async Task UpdateAsync(T obj)

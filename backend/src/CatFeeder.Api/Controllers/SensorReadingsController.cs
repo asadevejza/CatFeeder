@@ -2,10 +2,12 @@ using CatFeeder.Data.Modeli;
 using CatFeeder.Servis.Servisi;
 using CatFeeder.Api.Dtos;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace CatFeeder.Api.Controllers
 {
     [ApiController]
+    [AllowAnonymous]
     [Route("api/[controller]")]
     public class SensorReadingsController : ControllerBase
     {
@@ -20,6 +22,7 @@ namespace CatFeeder.Api.Controllers
             new(r.Id, r.Timestamp, r.FoodLevelPercent, r.WaterLevelPercent, r.Temperature, r.Humidity);
 
         // 1. Dobavi sva očitavanja (npr. za prikaz grafikona na frontend-u)
+        [Authorize]
         [HttpGet]
         public async Task<ActionResult<List<SensorReadingDto>>> GetAll()
         {
@@ -28,6 +31,7 @@ namespace CatFeeder.Api.Controllers
         }
 
         // 2. Endpoint koji će "hranilica" pozivati da pošalje nova očitavanja
+        [AllowAnonymous]
         [HttpPost]
         public async Task<ActionResult<SensorReadingDto>> PostReading(SensorReadingCreateDto dto)
         {
