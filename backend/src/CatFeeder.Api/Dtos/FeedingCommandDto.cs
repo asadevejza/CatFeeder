@@ -1,6 +1,6 @@
 ﻿namespace CatFeeder.Api.Dtos;
 
-public record CreateFeedingCommandDto(int DurationSeconds);
+public record CreateFeedingCommandDto(int DurationSeconds, int CatId, int PortionGrams);
 
 public record FeedingCommandDto(
     int Id,

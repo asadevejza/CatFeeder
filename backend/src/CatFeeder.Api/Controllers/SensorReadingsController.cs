@@ -47,12 +47,36 @@ namespace CatFeeder.Api.Controllers
                 WaterLevelPercent = dto.WaterLevelPercent,
                 Temperature = dto.Temperature,
                 Humidity = dto.Humidity,
-                Timestamp = dto.Timestamp ?? DateTime.Now,
+                Timestamp = dto.Timestamp ?? DateTime.UtcNow, // Preporučeno da bude UTC
             };
 
             await _sensorServis.AddAsync(reading);
 
             return CreatedAtAction(nameof(GetAll), new { id = reading.Id }, ToDto(reading));
+        }
+
+        // 3. Novi endpoint za provjeru statusa uređaja (Online / Offline)
+        [AllowAnonymous]
+        [HttpGet("status")]
+        public async Task<IActionResult> GetDeviceStatus()
+        {
+            var readings = await _sensorServis.GetAllAsync();
+            var lastReading = readings.OrderByDescending(r => r.Timestamp).FirstOrDefault();
+
+            if (lastReading == null)
+            {
+                return Ok(new { isOnline = false, message = "🔴 Device Offline (Nema podataka)" });
+            }
+
+            // Izračunaj razliku u vremenu
+            var timeDifference = DateTime.UtcNow - lastReading.Timestamp;
+
+            if (timeDifference.TotalMinutes > 2)
+            {
+                return Ok(new { isOnline = false, message = "🔴 Device Offline" });
+            }
+
+            return Ok(new { isOnline = true, message = "🟢 Device Online" });
         }
     }
 }

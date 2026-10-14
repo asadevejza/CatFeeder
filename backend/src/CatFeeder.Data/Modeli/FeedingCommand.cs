@@ -13,5 +13,11 @@ namespace CatFeeder.Data.Modeli
         public bool Executed { get; set; } = false;
 
         public int DurationSeconds { get; set; } = 2;
+
+        // Nova polja
+        public int? CatId { get; set; }
+        public int PortionGrams { get; set; }
+        public string TriggeredBy { get; set; } = "Manual (App)";
+        public int? ScheduleId { get; set; }
     }
 }

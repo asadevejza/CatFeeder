@@ -103,6 +103,9 @@ namespace CatFeeder.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("CatId")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -111,6 +114,16 @@ namespace CatFeeder.Data.Migrations
 
                     b.Property<bool>("Executed")
                         .HasColumnType("boolean");
+
+                    b.Property<int>("PortionGrams")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ScheduleId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TriggeredBy")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 

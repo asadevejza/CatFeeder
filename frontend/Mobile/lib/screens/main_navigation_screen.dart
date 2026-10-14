@@ -222,33 +222,24 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   Future<bool> feedCatNow(int catId, int portionGrams) async {
   try {
-    // 1) Komanda za ESP32 (servo)
-    final commandResponse = await http.post(
+    final response = await http.post(
       Uri.parse('$baseUrl/feedingcommands'),
       headers: apiHeaders(withJsonBody: true),
-      body: json.encode({'durationSeconds': 2}),
-    );
-
-    debugPrint('FEED COMMAND: ${commandResponse.statusCode} ${commandResponse.body}');
-
-    if (commandResponse.statusCode != 200 && commandResponse.statusCode != 201) {
-      return false; // ako komanda ne ode, ne upisuj log
-    }
-
-    // 2) Log hranjenja (historija / statistika)
-    final logResponse = await http.post(
-      Uri.parse('$baseUrl/feedinglogs'),
-      headers: apiHeaders(withJsonBody: true),
       body: json.encode({
+        'durationSeconds': (portionGrams / 30).ceil().clamp(1, 10),
         'catId': catId,
         'portionGrams': portionGrams,
-        'triggeredBy': 'Manual (App)',
       }),
     );
-    if (logResponse.statusCode != 200 && logResponse.statusCode != 201) return false;
 
-    await fetchFeedingSummary();
-    await fetchSensorData();
+    if (response.statusCode != 200 && response.statusCode != 201) return false;
+
+    // log nastaje tek kad ESP32 potvrdi, pa osvježi malo kasnije
+    Future.delayed(const Duration(seconds: 12), () async {
+      if (!mounted) return;
+      await fetchFeedingSummary();
+    });
+
     return true;
   } catch (e) {
     debugPrint('feedCatNow greška: $e');
