@@ -52,45 +52,127 @@ namespace CatFeeder.Api.Controllers
             {
                 execute = true,
                 id = command.Id,
-                durationSeconds = command.DurationSeconds
+                durationSeconds = command.DurationSeconds,
+                portionGrams = command.PortionGrams // <--- Ovdje šaljemo točne grame iz aplikacije
             });
         }
 
         // ESP32 -> Označava komandu kao izvršenu i automatski smanjuje nivo hrane
+
         [AllowAnonymous]
         [HttpPost("{id}/complete")]
-        public async Task<IActionResult> Complete(int id)
+        public async Task<IActionResult> Complete(
+            int id,
+            [FromBody] CompleteFeedingCommandDto? dto)
         {
-            // 1. Pronađi komandu prije nego je označimo kao izvršenu da znamo koliko grama je izbačeno
             var command = await _db.FeedingCommands.FindAsync(id);
 
-            // 2. Označi komandu kao izvršenu preko servisa
+            if (command == null)
+                return NotFound(new { error = "Komanda nije pronađena." });
+
+            // Spriječi ponovno evidentiranje iste komande.
+            if (command.Executed)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    alreadyCompleted = true
+                });
+            }
+
+            double? actualGrams = dto?.ActualPortionGrams;
+
+            // Rezervna vrijednost: tražena količina.
+            // Ovo nije potvrđeno mjerenje vage.
+            if (!actualGrams.HasValue && command.PortionGrams > 0)
+                actualGrams = command.PortionGrams;
+
+            if (actualGrams.HasValue &&
+                (double.IsNaN(actualGrams.Value) ||
+                 double.IsInfinity(actualGrams.Value) ||
+                 actualGrams.Value < 0 ||
+                 actualGrams.Value > 5000))
+            {
+                return BadRequest(new
+                {
+                    error = "Neispravna izmjerena količina."
+                });
+            }
+
+            double? weight = dto?.FoodWeightGrams;
+
+            if (weight.HasValue &&
+                (double.IsNaN(weight.Value) ||
+                 double.IsInfinity(weight.Value) ||
+                 weight.Value < 0 ||
+                 weight.Value > 100000))
+            {
+                return BadRequest(new
+                {
+                    error = "Neispravna težina hrane."
+                });
+            }
+
+            command.ActualPortionGrams = actualGrams;
+
+            // Označi komandu izvršenom.
             await _servis.CompleteAsync(id);
 
-            if (command != null && command.PortionGrams > 0)
+            // Ako imamo stvarnu težinu, ona je izvor istine.
+            if (weight.HasValue)
             {
-                // 3. Uzmi posljednje očitavanje senzora da vidimo trenutni postotak
+                const double maxCapacityGrams = 500.0;
+
+                double foodPercent = Math.Clamp(
+                    weight.Value / maxCapacityGrams * 100.0,
+                    0.0,
+                    100.0
+                );
+
                 var lastReading = await _db.SensorReadings
                     .OrderByDescending(s => s.Timestamp)
                     .FirstOrDefaultAsync();
 
-                if (lastReading != null)
+                var newReading = new SensorReading
                 {
-                    // Pretpostavka: Recimo da puna posuda ima npr. 300 grama (ili prilagodi maksimalnom kapacitetu posude)
-                    // Možemo umanjiti postotak srazmjerno izbačenim gramima, npr. svaki gram skida oko 0.33% ako je 300g max, 
-                    // Ili ako želiš direktno od postotka oduzeti procenat:
+                    FoodWeightGrams = weight.Value,
+                    FoodLevelPercent = foodPercent,
+                    WaterLevelPercent = lastReading?.WaterLevelPercent,
+                    Temperature = lastReading?.Temperature,
+                    Humidity = lastReading?.Humidity,
+                    Timestamp = DateTime.UtcNow
+                };
 
-                    // Primjer: Pretvorimo gramažu u procenat (ako je kapacitet posude npr. 500g)
-                    double maxCapacityGrams = 500.0;
-                    double percentageDrop = (command.PortionGrams / maxCapacityGrams) * 100.0;
+                _db.SensorReadings.Add(newReading);
+            }
+            else
+            {
+                // Bez očitanja vage zadrži postojeću logiku
+                // i smanji nivo samo za ovu komandu.
+                var lastReading = await _db.SensorReadings
+                    .OrderByDescending(s => s.Timestamp)
+                    .FirstOrDefaultAsync();
 
-                    double newFoodLevel = lastReading.FoodLevelPercent - percentageDrop;
-                    if (newFoodLevel < 0) newFoodLevel = 0;
+                if (lastReading != null && actualGrams.HasValue)
+                {
+                    const double maxCapacityGrams = 500.0;
 
-                    // 4. Kreiraj novo očitavanje sa smanjenim nivoom hrane (ostale senzore prekopiraj iz zadnjeg)
+                    double drop =
+                        actualGrams.Value / maxCapacityGrams * 100.0;
+
                     var newReading = new SensorReading
                     {
-                        FoodLevelPercent = newFoodLevel,
+                        FoodLevelPercent = Math.Clamp(
+                            lastReading.FoodLevelPercent - drop,
+                            0.0,
+                            100.0
+                        ),
+                        FoodWeightGrams = lastReading.FoodWeightGrams.HasValue
+                            ? Math.Max(
+                                0,
+                                lastReading.FoodWeightGrams.Value -
+                                actualGrams.Value)
+                            : null,
                         WaterLevelPercent = lastReading.WaterLevelPercent,
                         Temperature = lastReading.Temperature,
                         Humidity = lastReading.Humidity,
@@ -98,14 +180,18 @@ namespace CatFeeder.Api.Controllers
                     };
 
                     _db.SensorReadings.Add(newReading);
-                    await _db.SaveChangesAsync();
                 }
             }
 
+            await _db.SaveChangesAsync();
+
             return Ok(new
             {
-                success = true
+                success = true,
+                actualPortionGrams = command.ActualPortionGrams,
+                foodWeightGrams = weight
             });
         }
+
     }
 }

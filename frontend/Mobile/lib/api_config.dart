@@ -7,8 +7,7 @@ const int totalCapacityGrams = 2000;
 
 // Produkcijska adresa backend servera na Railway-u.
 const String defaultBaseUrl =
-'https://cons-contains-amd-succeed.trycloudflare.com/api';
-
+'https://exec-helping-yards-citizenship.trycloudflare.com/api';
 // Obavezni API Ključ koji odgovara vrijednosti u Railway varijablama.
 const String apiKey = '82fUSgPL8mUSKGoLvUYK1U9Bl7NraNrkbxhLqvgfTvU';
 

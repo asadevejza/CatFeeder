@@ -17,6 +17,7 @@ import '../services/user_avatar_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_logo.dart';
 import 'schedule_form_screen.dart';
+import '../services/ai_insight_service.dart';
 
 Cat? _findCat(List<Cat> cats, int? id) {
   if (cats.isEmpty) return null;
@@ -355,7 +356,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
   bool feeding = false;
 
   Timer? _statusTimer;
-  bool? deviceOnline; // null = još se provjerava
+  bool? deviceOnline;
 
   @override
   void initState() {
@@ -647,7 +648,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                       child: _HomeMetric(
                         icon: Icons.restaurant_rounded,
                         label: 'Danas hrana',
-                       value: '${(foodProgress * 100).round()}%',
+                        value: '${(foodProgress * 100).round()}%',
                         tint: AppColors.lavender,
                         progress: foodProgress,
                       ),
@@ -799,11 +800,15 @@ class _ModernStatsScreenState extends State<ModernStatsScreen> {
   Map<int, Uint8List> avatars = {};
 
   int totalMeals = 0;
+  AiInsight? aiInsight;
+  bool loadingAiInsight = false;
+  String? aiInsightError;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadAiInsight();
   }
 
   @override
@@ -814,6 +819,49 @@ class _ModernStatsScreenState extends State<ModernStatsScreen> {
         oldWidget.baseUrl != widget.baseUrl ||
         oldWidget.cats != widget.cats) {
       _load();
+      _loadAiInsight();
+    }
+  }
+
+  Future<void> _loadAiInsight() async {
+    final catId = widget.selectedCatId;
+
+    if (catId == null) {
+      setState(() {
+        aiInsight = null;
+        aiInsightError = null;
+      });
+      return;
+    }
+
+    setState(() {
+      loadingAiInsight = true;
+      aiInsightError = null;
+    });
+
+    try {
+      final result = await AiInsightService.fetch(
+        widget.baseUrl,
+        catId,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        aiInsight = result;
+        if (result == null) {
+          aiInsightError = 'AI uvid trenutno nije dostupan.';
+        }
+        loadingAiInsight = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        aiInsight = null;
+        aiInsightError = 'Greška pri učitavanju AI uvida.';
+        loadingAiInsight = false;
+      });
     }
   }
 
@@ -1003,21 +1051,212 @@ class _ModernStatsScreenState extends State<ModernStatsScreen> {
     _load();
   }
 
+  Widget _buildAiInsightCard() {
+    final insight = aiInsight;
+
+    return ModernCard(
+      padding: const EdgeInsets.all(18),
+      radius: 22,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.lavender,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'AI analiza ishrane',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Pametni pregled navika tvoje mačke',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          if (loadingAiInsight)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: CircularProgressIndicator(
+                  color: AppColors.primary,
+                ),
+              ),
+            )
+          else if (insight == null)
+            const Text(
+              'AI analiza trenutno nije dostupna. '
+              'Provjeri vezu s backendom i pokušaj ponovo.',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textMuted,
+              ),
+            )
+          else ...[
+            Text(
+              insight.summary,
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.5,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            Row(
+              children: [
+                Expanded(
+                  child: _aiInsightMetric(
+                    'Dnevni prosjek',
+                    insight.averageDailyPortionGrams,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _aiInsightMetric(
+                    'Preporuka',
+                    insight.recommendedDailyPortionGrams,
+                  ),
+                ),
+              ],
+            ),
+
+            if (insight.alerts.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              const Text(
+                'Upozorenja',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...insight.alerts.map(
+                (alert) => Padding(
+                  padding: const EdgeInsets.only(bottom: 7),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.info_outline_rounded,
+                        size: 17,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          alert,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            height: 1.4,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _loadAiInsight,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Osvježi AI analizu'),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _aiInsightMetric(String label, double? value) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              color: AppColors.textMuted,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value == null ? 'N/A' : '${value.round()} g',
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textDark,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cat = _findCat(widget.cats, widget.selectedCatId);
 
-    final total = points.fold<int>(0, (sum, item) => sum + item.grams);
+    final total = points.fold<int>(
+      0,
+      (sum, item) => sum + item.grams,
+    );
 
-    final average = points.isEmpty ? 0 : (total / points.length).round();
+    final average = points.isEmpty
+        ? 0
+        : (total / points.length).round();
 
     final target = profile?.dailyGoalGrams ?? 200;
 
-    final adherence = target <= 0 ? 0 : ((average / target) * 100).round();
+    final adherence = target <= 0
+        ? 0
+        : ((average / target) * 100).round();
 
     final today = points.isEmpty ? 0 : points.last.grams;
 
-    final activeDays = points.where((point) => point.grams > 0).length;
+    final activeDays =
+        points.where((point) => point.grams > 0).length;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -1046,13 +1285,16 @@ class _ModernStatsScreenState extends State<ModernStatsScreen> {
                 ),
               ),
               const SizedBox(height: 15),
+
               _CatSelector(
                 cats: widget.cats,
                 selectedCatId: widget.selectedCatId,
                 avatars: avatars,
                 onSelect: widget.onSelectCat,
               ),
+
               const SizedBox(height: 15),
+
               _RangeTabs(
                 days: rangeDays,
                 custom: customRange != null,
@@ -1060,7 +1302,9 @@ class _ModernStatsScreenState extends State<ModernStatsScreen> {
                 on30: () => _selectDays(30),
                 onCustom: _chooseCustom,
               ),
+
               const SizedBox(height: 14),
+
               if (cat == null)
                 _EmptyCatCard(onTap: () {})
               else ...[
@@ -1072,7 +1316,9 @@ class _ModernStatsScreenState extends State<ModernStatsScreen> {
                   average: average,
                   meals: totalMeals,
                 ),
+
                 const SizedBox(height: 12),
+
                 ModernCard(
                   padding: const EdgeInsets.fromLTRB(16, 17, 16, 14),
                   radius: 22,
@@ -1100,7 +1346,9 @@ class _ModernStatsScreenState extends State<ModernStatsScreen> {
                           ),
                         ],
                       ),
+
                       const SizedBox(height: 10),
+
                       if (loading)
                         const SizedBox(
                           height: 230,
@@ -1116,7 +1364,9 @@ class _ModernStatsScreenState extends State<ModernStatsScreen> {
                           child: Center(
                             child: Text(
                               'Nema podataka za odabrani period',
-                              style: TextStyle(color: AppColors.textMuted),
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                              ),
                             ),
                           ),
                         )
@@ -1136,7 +1386,9 @@ class _ModernStatsScreenState extends State<ModernStatsScreen> {
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 12),
+
                 Row(
                   children: [
                     _StatMetric(
@@ -1154,7 +1406,9 @@ class _ModernStatsScreenState extends State<ModernStatsScreen> {
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 10),
+
                 Row(
                   children: [
                     _StatMetric(
@@ -1172,46 +1426,10 @@ class _ModernStatsScreenState extends State<ModernStatsScreen> {
                     ),
                   ],
                 ),
+
+                // AI analiza ishrane
                 const SizedBox(height: 16),
-                const Text(
-                  'Detalji hranilice',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 9),
-                _DetailCard(
-                  icon: Icons.restaurant_rounded,
-                  tint: AppColors.lavender,
-                  title: 'Hrana',
-                  value: '$total g',
-                  change: '$adherence% prosječnog dnevnog cilja',
-                ),
-                const SizedBox(height: 9),
-                _DetailCard(
-                  icon: Icons.water_drop_rounded,
-                  tint: AppColors.sky,
-                  title: 'Voda',
-                  value: '${widget.water.round()}%',
-                  change: 'Trenutno stanje',
-                ),
-                const SizedBox(height: 9),
-                _DetailCard(
-                  icon: Icons.thermostat_rounded,
-                  tint: AppColors.peach,
-                  title: 'Temperatura',
-                  value: '${widget.temp.toStringAsFixed(1)}°C',
-                  change: 'Senzor hranilice',
-                ),
-                const SizedBox(height: 9),
-                _DetailCard(
-                  icon: Icons.opacity_rounded,
-                  tint: AppColors.mint,
-                  title: 'Vlažnost',
-                  value: '${widget.humidity.toStringAsFixed(0)}%',
-                  change: 'Senzor hranilice',
-                ),
+                _buildAiInsightCard(),
               ],
             ],
           ),
@@ -1228,6 +1446,8 @@ class _ModernStatsScreenState extends State<ModernStatsScreen> {
 class ModernFeederScreen extends StatefulWidget {
   final double food;
   final double water;
+  final double temp;
+  final double humidity;
   final List<Cat> cats;
   final int? selectedCatId;
   final Future<bool> Function(int, int) onFeedNow;
@@ -1240,6 +1460,8 @@ class ModernFeederScreen extends StatefulWidget {
     super.key,
     required this.food,
     required this.water,
+    required this.temp,
+    required this.humidity,
     required this.cats,
     required this.selectedCatId,
     required this.onFeedNow,
@@ -1719,9 +1941,9 @@ class _ModernFeederScreenState extends State<ModernFeederScreen> {
                           height: 122,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: const Color(0xFFF7FCF9),
+                            color: const Color.fromARGB(255, 220, 224, 222),
                             border: Border.all(
-                              color: AppColors.mintStrong,
+                              color: const Color.fromARGB(86, 179, 218, 200),
                               width: 3,
                             ),
                             boxShadow: [
@@ -1780,29 +2002,45 @@ class _ModernFeederScreenState extends State<ModernFeederScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 13),
-            Row(
-              children: [
-                Expanded(
-                  child: _FeederLevelCard(
-                    icon: Icons.restaurant_rounded,
-                    title: 'Hrana',
-                    value: '${widget.food.round()}%',
-                    progress: widget.food / 100,
-                    tint: AppColors.lavender,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _FeederLevelCard(
-                    icon: Icons.water_drop_rounded,
-                    title: 'Voda',
-                    value: '${widget.water.round()}%',
-                    progress: widget.water / 100,
-                    tint: AppColors.sky,
-                  ),
-                ),
-              ],
+            const SizedBox(height: 16),
+            const Text(
+              'Detalji hranilice',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 9),
+            _DetailCard(
+              icon: Icons.restaurant_rounded,
+              tint: AppColors.lavender,
+              title: 'Hrana',
+              value: '${widget.food.round()}%',
+              change: 'Trenutna popunjenost spremnika',
+            ),
+            const SizedBox(height: 9),
+            _DetailCard(
+              icon: Icons.water_drop_rounded,
+              tint: AppColors.sky,
+              title: 'Voda',
+              value: '${widget.water.round()}%',
+              change: 'Trenutno stanje',
+            ),
+            const SizedBox(height: 9),
+            _DetailCard(
+              icon: Icons.thermostat_rounded,
+              tint: AppColors.peach,
+              title: 'Temperatura',
+              value: '${widget.temp.toStringAsFixed(1)}°C',
+              change: 'Senzor hranilice',
+            ),
+            const SizedBox(height: 9),
+            _DetailCard(
+              icon: Icons.opacity_rounded,
+              tint: AppColors.mint,
+              title: 'Vlažnost',
+              value: '${widget.humidity.toStringAsFixed(0)}%',
+              change: 'Senzor hranilice',
             ),
             const SizedBox(height: 17),
             ModernCard(
@@ -1913,24 +2151,6 @@ class _ModernFeederScreenState extends State<ModernFeederScreen> {
                             ],
                           ],
                         ),
-            ),
-            const SizedBox(height: 13),
-            Row(
-              children: [
-                _FeederStat(
-                  icon: Icons.water_drop_outlined,
-                  title: 'Voda',
-                  value: '${widget.water.round()}%',
-                  tint: AppColors.sky,
-                ),
-                const SizedBox(width: 10),
-                _FeederStat(
-                  icon: Icons.restaurant_outlined,
-                  title: 'Porcija',
-                  value: '$portion g',
-                  tint: AppColors.lavender,
-                ),
-              ],
             ),
           ],
         ),
@@ -2642,7 +2862,7 @@ class _FeederStatusCard extends StatelessWidget {
   final double? water;
   final _NextFeeding? next;
   final Cat? selectedCat;
-  final bool? online; // null = provjera u toku
+  final bool? online;
   final VoidCallback onTap;
 
   const _FeederStatusCard({
@@ -3433,7 +3653,6 @@ class _FeedingChartPainter extends CustomPainter {
       ..color = AppColors.cardBorder
       ..strokeWidth = 1;
 
-    // GRID LINES
     for (int i = 0; i < 5; i++) {
       final y = top + (bottom - top) * i / 4;
 
@@ -3460,7 +3679,6 @@ class _FeedingChartPainter extends CustomPainter {
       points.add(Offset(x, y));
     }
 
-    // AREA UNDER CURVE
     final area = Path()
       ..moveTo(points.first.dx, bottom)
       ..lineTo(points.first.dx, points.first.dy);
@@ -3492,7 +3710,6 @@ class _FeedingChartPainter extends CustomPainter {
 
     canvas.drawPath(area, areaPaint);
 
-    // CURVE
     final curve = Path()..moveTo(points.first.dx, points.first.dy);
 
     for (int i = 1; i < points.length; i++) {
@@ -3516,7 +3733,6 @@ class _FeedingChartPainter extends CustomPainter {
 
     canvas.drawPath(curve, curvePaint);
 
-    // POINTS
     final whitePointPaint = Paint()..color = Colors.white;
 
     final pointPaint = Paint()..color = AppColors.primary;
@@ -3526,7 +3742,6 @@ class _FeedingChartPainter extends CustomPainter {
       canvas.drawCircle(point, 3.1, pointPaint);
     }
 
-    // TARGET LINE
     final targetY = bottom - (target.toDouble() / maxV) * (bottom - top);
 
     final dash = Paint()

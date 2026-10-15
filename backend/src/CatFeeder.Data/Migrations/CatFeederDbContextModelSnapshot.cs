@@ -103,6 +103,9 @@ namespace CatFeeder.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<double?>("ActualPortionGrams")
+                        .HasColumnType("double precision");
+
                     b.Property<int?>("CatId")
                         .HasColumnType("integer");
 
@@ -195,6 +198,9 @@ namespace CatFeeder.Data.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<double>("FoodLevelPercent")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("FoodWeightGrams")
                         .HasColumnType("double precision");
 
                     b.Property<double?>("Humidity")

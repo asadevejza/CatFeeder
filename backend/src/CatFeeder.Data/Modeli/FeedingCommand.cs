@@ -19,5 +19,6 @@ namespace CatFeeder.Data.Modeli
         public int PortionGrams { get; set; }
         public string TriggeredBy { get; set; } = "Manual (App)";
         public int? ScheduleId { get; set; }
+        public double? ActualPortionGrams { get; set; }
     }
 }

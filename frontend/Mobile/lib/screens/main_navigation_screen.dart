@@ -456,6 +456,8 @@ Future<int?> addCat(
       ModernFeederScreen(
         food: foodLevel,
         water: waterLevel ?? 0,
+          temp: temp,
+    humidity: humidity,
         cats: cats,
         selectedCatId: selectedCatId,
         onFeedNow: feedCatNow,

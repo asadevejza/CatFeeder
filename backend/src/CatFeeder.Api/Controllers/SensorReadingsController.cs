@@ -19,7 +19,12 @@ namespace CatFeeder.Api.Controllers
         }
 
         private static SensorReadingDto ToDto(SensorReading r) =>
-            new(r.Id, r.Timestamp, r.FoodLevelPercent, r.WaterLevelPercent, r.Temperature, r.Humidity);
+            new(r.Id,r.Timestamp,
+        r.FoodLevelPercent,
+        r.WaterLevelPercent,
+        r.Temperature,
+        r.Humidity,
+        r.FoodWeightGrams);
 
         // 1. Dobavi sva očitavanja (npr. za prikaz grafikona na frontend-u)
         [Authorize]
@@ -48,6 +53,7 @@ namespace CatFeeder.Api.Controllers
                 Temperature = dto.Temperature,
                 Humidity = dto.Humidity,
                 Timestamp = dto.Timestamp ?? DateTime.UtcNow, // Preporučeno da bude UTC
+                FoodWeightGrams = dto.FoodWeightGrams
             };
 
             await _sensorServis.AddAsync(reading);

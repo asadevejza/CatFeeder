@@ -19,5 +19,7 @@ namespace CatFeeder.Data.Modeli
         public double? WaterLevelPercent { get; set; }
         public double? Temperature { get; set; }
         public double? Humidity { get; set; }
+        public double? FoodWeightGrams { get; set; }
+
     }
 }
